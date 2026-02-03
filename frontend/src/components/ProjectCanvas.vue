@@ -306,7 +306,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { VueDraggableNext as Draggable } from "vue-draggable-next";
 import { useProjectStore } from "../stores/project";
-import type { ProjectModule } from "../types";
+import type { ProjectConnection, ProjectModule } from "../types";
 
 const store = useProjectStore();
 const canvasRef = ref<HTMLElement | null>(null);
@@ -614,6 +614,7 @@ function handleNodeClick(moduleId: number) {
       { fromId: linkMode.value.fromId, toId: moduleId },
     ];
     scheduleLineUpdate();
+    saveConnections();
   }
   cancelLinkMode();
 }
@@ -625,12 +626,14 @@ function removeConnections() {
     (connection) => connection.fromId !== moduleId && connection.toId !== moduleId
   );
   scheduleLineUpdate();
+  saveConnections();
   hideContextMenu();
 }
 
 function clearConnections() {
   connections.value = [];
   scheduleLineUpdate();
+  saveConnections();
 }
 
 function resetModule() {
@@ -659,6 +662,7 @@ function removeModule() {
     (connection) => connection.fromId !== moduleId && connection.toId !== moduleId
   );
   scheduleLineUpdate();
+  saveConnections();
   hideContextMenu();
 }
 
@@ -683,7 +687,20 @@ watch(
       buildMindmapLayout();
     }
     updateLines();
+    saveConnections();
   }
+);
+
+watch(
+  () => store.connections,
+  (items) => {
+    connections.value = items.map((item) => ({
+      fromId: item.from_project_module_id,
+      toId: item.to_project_module_id,
+    }));
+    scheduleLineUpdate();
+  },
+  { immediate: true }
 );
 
 onMounted(() => {
@@ -696,6 +713,17 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener("resize", handleResize);
 });
+
+function saveConnections() {
+  if (!store.project) return;
+  const payload: ProjectConnection[] = connections.value.map((item) => ({
+    id: 0,
+    project_id: store.project?.id ?? 0,
+    from_project_module_id: item.fromId,
+    to_project_module_id: item.toId,
+  }));
+  store.updateConnections(payload);
+}
 </script>
 
 <style scoped>

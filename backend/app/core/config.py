@@ -34,6 +34,8 @@ class Settings(BaseSettings):
         "award": 2.5,
     }
     legacy_multiplier: float = 1.3
+    admin_username: str = "admin"
+    admin_password: str = "admin"
 
     @field_validator("database_url")
     @classmethod
@@ -41,6 +43,15 @@ class Settings(BaseSettings):
         """Normalize database URL for psycopg driver."""
 
         return _normalize_database_url(value)
+
+    @field_validator("openai_api_key")
+    @classmethod
+    def _normalize_openai_api_key(cls, value: str | None) -> str | None:
+        """Strip whitespace from OpenAI API key."""
+
+        if not value:
+            return value
+        return value.strip()
 
 
 def get_settings() -> Settings:

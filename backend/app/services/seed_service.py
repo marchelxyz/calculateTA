@@ -3,7 +3,9 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Module, Rate
+from app.core.config import settings
+from app.core.security import hash_password
+from app.models import Module, Rate, User
 
 
 DEFAULT_MODULES = [
@@ -147,6 +149,7 @@ def seed_defaults(session: Session) -> None:
 
     _seed_modules(session)
     _seed_rates(session)
+    _seed_admin(session)
 
 
 def _seed_modules(session: Session) -> None:
@@ -166,4 +169,17 @@ def _seed_rates(session: Session) -> None:
         if (rate_data["role"], rate_data["level"]) in existing_set:
             continue
         session.add(Rate(**rate_data))
+    session.commit()
+
+
+def _seed_admin(session: Session) -> None:
+    existing = session.execute(select(User.id)).first()
+    if existing:
+        return
+    admin = User(
+        username=settings.admin_username,
+        password_hash=hash_password(settings.admin_password),
+        role="admin",
+    )
+    session.add(admin)
     session.commit()
