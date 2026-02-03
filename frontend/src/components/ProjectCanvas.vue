@@ -1,126 +1,129 @@
 <template>
   <section class="panel">
     <h2>Холст проекта</h2>
-    <Draggable
-      class="canvas"
-      :list="store.projectModules"
-      :group="{ name: 'modules', pull: false, put: true }"
-      item-key="id"
-      :sort="false"
-      @add="handleAdd"
-    >
-      <template #item="{ element }">
-        <div class="module-card">
-          <header class="module-header">
-            <div>
-              <strong>{{ moduleName(element.module_id) }}</strong>
-              <small v-if="element.custom_name">{{ element.custom_name }}</small>
-            </div>
-            <button class="ghost" @click="store.removeProjectModule(element.id)">
-              Удалить
-            </button>
-          </header>
-          <div class="module-body">
-            <div class="grid">
-              <label>
-                FE часы
-                <input
-                  type="number"
-                  :value="element.override_frontend ?? baseHours(element.module_id).hours_frontend"
-                  @change="updateHours(element, 'override_frontend', $event)"
-                />
-              </label>
-              <label>
-                BE часы
-                <input
-                  type="number"
-                  :value="element.override_backend ?? baseHours(element.module_id).hours_backend"
-                  @change="updateHours(element, 'override_backend', $event)"
-                />
-              </label>
-              <label>
-                QA часы
-                <input
-                  type="number"
-                  :value="element.override_qa ?? baseHours(element.module_id).hours_qa"
-                  @change="updateHours(element, 'override_qa', $event)"
-                />
-              </label>
-            </div>
-            <div class="grid">
-              <label>
-                Неопределенность
-                <select
-                  :value="element.uncertainty_level ?? store.project?.uncertainty_level"
-                  @change="updateSelect(element, 'uncertainty_level', $event)"
-                >
-                  <option value="known">Делали 100 раз</option>
-                  <option value="new_tech">Новая технология</option>
-                </select>
-              </label>
-              <label>
-                UI/UX
-                <select
-                  :value="element.uiux_level ?? store.project?.uiux_level"
-                  @change="updateSelect(element, 'uiux_level', $event)"
-                >
-                  <option value="mvp">MVP / Bootstrap</option>
-                  <option value="award">Award Winning</option>
-                </select>
-              </label>
-              <label class="checkbox">
-                <input
-                  type="checkbox"
-                  :checked="element.legacy_code ?? store.project?.legacy_code"
-                  @change="updateCheckbox(element, 'legacy_code', $event)"
-                />
-                Legacy code
-              </label>
-            </div>
-            <div class="grid">
-              <label>
-                FE роль
-                <select
-                  :value="assignmentLevel(element.id, 'frontend')"
-                  @change="assignRole(element.id, 'frontend', $event)"
-                >
-                  <option value="junior">Junior</option>
-                  <option value="middle">Middle</option>
-                  <option value="senior">Senior</option>
-                </select>
-              </label>
-              <label>
-                BE роль
-                <select
-                  :value="assignmentLevel(element.id, 'backend')"
-                  @change="assignRole(element.id, 'backend', $event)"
-                >
-                  <option value="junior">Junior</option>
-                  <option value="middle">Middle</option>
-                  <option value="senior">Senior</option>
-                </select>
-              </label>
-              <label>
-                QA роль
-                <select
-                  :value="assignmentLevel(element.id, 'qa')"
-                  @change="assignRole(element.id, 'qa', $event)"
-                >
-                  <option value="junior">Junior</option>
-                  <option value="middle">Middle</option>
-                  <option value="senior">Senior</option>
-                </select>
-              </label>
+    <div class="canvas-surface">
+      <Draggable
+        class="canvas-nodes"
+        :list="store.projectModules"
+        :group="{ name: 'modules', pull: false, put: true }"
+        item-key="id"
+        :sort="true"
+        :animation="160"
+        @add="handleAdd"
+      >
+        <template #item="{ element }">
+          <div class="module-card">
+            <header class="module-header">
+              <div>
+                <strong>{{ moduleName(element.module_id) }}</strong>
+                <small v-if="element.custom_name">{{ element.custom_name }}</small>
+              </div>
+              <button class="ghost" @click="store.removeProjectModule(element.id)">
+                Удалить
+              </button>
+            </header>
+            <div class="module-body">
+              <div class="grid">
+                <label>
+                  FE часы
+                  <input
+                    type="number"
+                    :value="element.override_frontend ?? baseHours(element.module_id).hours_frontend"
+                    @change="updateHours(element, 'override_frontend', $event)"
+                  />
+                </label>
+                <label>
+                  BE часы
+                  <input
+                    type="number"
+                    :value="element.override_backend ?? baseHours(element.module_id).hours_backend"
+                    @change="updateHours(element, 'override_backend', $event)"
+                  />
+                </label>
+                <label>
+                  QA часы
+                  <input
+                    type="number"
+                    :value="element.override_qa ?? baseHours(element.module_id).hours_qa"
+                    @change="updateHours(element, 'override_qa', $event)"
+                  />
+                </label>
+              </div>
+              <div class="grid">
+                <label>
+                  Неопределенность
+                  <select
+                    :value="element.uncertainty_level ?? store.project?.uncertainty_level"
+                    @change="updateSelect(element, 'uncertainty_level', $event)"
+                  >
+                    <option value="known">Делали 100 раз</option>
+                    <option value="new_tech">Новая технология</option>
+                  </select>
+                </label>
+                <label>
+                  UI/UX
+                  <select
+                    :value="element.uiux_level ?? store.project?.uiux_level"
+                    @change="updateSelect(element, 'uiux_level', $event)"
+                  >
+                    <option value="mvp">MVP / Bootstrap</option>
+                    <option value="award">Award Winning</option>
+                  </select>
+                </label>
+                <label class="checkbox">
+                  <input
+                    type="checkbox"
+                    :checked="element.legacy_code ?? store.project?.legacy_code"
+                    @change="updateCheckbox(element, 'legacy_code', $event)"
+                  />
+                  Legacy code
+                </label>
+              </div>
+              <div class="grid">
+                <label>
+                  FE роль
+                  <select
+                    :value="assignmentLevel(element.id, 'frontend')"
+                    @change="assignRole(element.id, 'frontend', $event)"
+                  >
+                    <option value="junior">Junior</option>
+                    <option value="middle">Middle</option>
+                    <option value="senior">Senior</option>
+                  </select>
+                </label>
+                <label>
+                  BE роль
+                  <select
+                    :value="assignmentLevel(element.id, 'backend')"
+                    @change="assignRole(element.id, 'backend', $event)"
+                  >
+                    <option value="junior">Junior</option>
+                    <option value="middle">Middle</option>
+                    <option value="senior">Senior</option>
+                  </select>
+                </label>
+                <label>
+                  QA роль
+                  <select
+                    :value="assignmentLevel(element.id, 'qa')"
+                    @change="assignRole(element.id, 'qa', $event)"
+                  >
+                    <option value="junior">Junior</option>
+                    <option value="middle">Middle</option>
+                    <option value="senior">Senior</option>
+                  </select>
+                </label>
+              </div>
             </div>
           </div>
-        </div>
-      </template>
-      <template #footer>
-        <div v-if="store.projectModules.length === 0" class="empty">
-          Перетащите модули сюда
-        </div>
-      </template>
-    </Draggable>
+        </template>
+        <template #footer>
+          <div v-if="store.projectModules.length === 0" class="empty">
+            Перетащите модули сюда
+          </div>
+        </template>
+      </Draggable>
+    </div>
   </section>
 </template>
 
@@ -223,12 +226,24 @@ function assignRole(projectModuleId: number, role: string, event: Event) {
   border-radius: 16px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
-.canvas {
+.canvas-surface {
+  min-height: 420px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px dashed #cbd5f5;
+  background-image:
+    linear-gradient(#eef2ff 1px, transparent 1px),
+    linear-gradient(90deg, #eef2ff 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.canvas-nodes {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 12px;
+  min-height: 360px;
 }
 .module-card {
+  width: min(420px, 100%);
   border: 1px solid #e2e8f0;
   border-radius: 14px;
   padding: 12px;

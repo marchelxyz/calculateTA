@@ -130,15 +130,15 @@ DEFAULT_MODULES = [
 ]
 
 DEFAULT_RATES = [
-    {"role": "frontend", "level": "junior", "hourly_rate": 25},
-    {"role": "frontend", "level": "middle", "hourly_rate": 40},
-    {"role": "frontend", "level": "senior", "hourly_rate": 60},
-    {"role": "backend", "level": "junior", "hourly_rate": 28},
-    {"role": "backend", "level": "middle", "hourly_rate": 45},
-    {"role": "backend", "level": "senior", "hourly_rate": 70},
-    {"role": "qa", "level": "junior", "hourly_rate": 18},
-    {"role": "qa", "level": "middle", "hourly_rate": 30},
-    {"role": "qa", "level": "senior", "hourly_rate": 45},
+    {"role": "frontend", "level": "junior", "hourly_rate": 2000},
+    {"role": "frontend", "level": "middle", "hourly_rate": 3500},
+    {"role": "frontend", "level": "senior", "hourly_rate": 5000},
+    {"role": "backend", "level": "junior", "hourly_rate": 2500},
+    {"role": "backend", "level": "middle", "hourly_rate": 4000},
+    {"role": "backend", "level": "senior", "hourly_rate": 6000},
+    {"role": "qa", "level": "junior", "hourly_rate": 1200},
+    {"role": "qa", "level": "middle", "hourly_rate": 2000},
+    {"role": "qa", "level": "senior", "hourly_rate": 3000},
 ]
 
 

@@ -36,6 +36,13 @@ export type Rate = {
   hourly_rate: number;
 };
 
+export type RateDraft = {
+  id?: number;
+  role: string;
+  level: string;
+  hourly_rate: number;
+};
+
 export type Assignment = {
   id: number;
   project_module_id: number;
