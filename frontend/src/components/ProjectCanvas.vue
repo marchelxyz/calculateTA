@@ -126,7 +126,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import Draggable from "vue-draggable-next";
+import { VueDraggableNext as Draggable } from "vue-draggable-next";
 import { useProjectStore } from "../stores/project";
 import type { ProjectModule } from "../types";
 
