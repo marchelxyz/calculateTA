@@ -105,6 +105,7 @@ def _calculate_totals(
     project_modules: list[ProjectModule],
     assignments: dict[tuple[int, str], str],
     rates: dict[tuple[str, str], float],
+    coefficients: list[ProjectCoefficient],
     infra_items: list[ProjectInfrastructure],
     coefficients: list[ProjectCoefficient],
 ) -> SummaryTotals:
@@ -221,8 +222,6 @@ def _combine_coefficients(coefficients: list[ProjectCoefficient]) -> float:
     for coefficient in coefficients:
         multiplier *= max(coefficient.multiplier, 0)
     return multiplier
-
-
 def _calculate_infra_cost(infra_items: list[ProjectInfrastructure]) -> float:
     cost = 0.0
     for item in infra_items:
