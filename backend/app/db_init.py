@@ -4,7 +4,19 @@ from sqlalchemy import inspect
 from sqlalchemy.engine import Engine
 
 from app.db import Base, engine
-from app.models import Assignment, Module, Project, ProjectModule, Rate
+from app.models import (
+    Assignment,
+    Module,
+    ModuleRoleHours,
+    Project,
+    ProjectModule,
+    ProjectNode,
+    ProjectNodeConnection,
+    ProjectNodeRoleHours,
+    ProjectNote,
+    ProjectMindmapVersion,
+    Rate,
+)
 
 
 def init_and_verify_db() -> None:
@@ -18,8 +30,14 @@ def _verify_schema(db_engine: Engine) -> None:
     inspector = inspect(db_engine)
     expected = {
         "modules": _columns(Module),
+        "module_role_hours": _columns(ModuleRoleHours),
         "projects": _columns(Project),
         "project_modules": _columns(ProjectModule),
+        "project_nodes": _columns(ProjectNode),
+        "project_node_role_hours": _columns(ProjectNodeRoleHours),
+        "project_node_connections": _columns(ProjectNodeConnection),
+        "project_notes": _columns(ProjectNote),
+        "project_mindmap_versions": _columns(ProjectMindmapVersion),
         "rates": _columns(Rate),
         "assignments": _columns(Assignment),
     }

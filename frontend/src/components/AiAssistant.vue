@@ -11,6 +11,7 @@
     ></textarea>
     <div class="actions">
       <button class="primary" @click="runAi">Разобрать задачи</button>
+      <button class="primary" @click="buildMindmap">Создать схему</button>
       <button class="ghost" @click="addSuggested" :disabled="!canAdd">
         Добавить модули
       </button>
@@ -76,6 +77,11 @@ function moduleName(code: string) {
 async function runAi() {
   if (!prompt.value.trim()) return;
   await store.parseAi(prompt.value);
+}
+
+async function buildMindmap() {
+  if (!prompt.value.trim()) return;
+  await store.generateMindmap(prompt.value);
 }
 
 async function addSuggested() {

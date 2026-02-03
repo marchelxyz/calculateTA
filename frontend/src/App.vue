@@ -1,11 +1,14 @@
 <template>
-  <div class="app">
+  <div class="app" :class="{ dark: isDark }">
     <header class="header">
       <div class="header-top">
         <div>
           <h1>Центр управления полетами</h1>
           <p>Интерактивный конструктор проекта с пересчетом денег и времени.</p>
         </div>
+        <button class="theme-toggle" @click="toggleTheme">
+          {{ isDark ? "Светлая тема" : "Темная тема" }}
+        </button>
       </div>
     </header>
     <nav class="tabs">
@@ -18,6 +21,12 @@
       <button :class="{ active: activeTab === 'infra' }" @click="activeTab = 'infra'">
         Инфраструктура
       </button>
+      <button :class="{ active: activeTab === 'modules' }" @click="activeTab = 'modules'">
+        Модули
+      </button>
+      <button :class="{ active: activeTab === 'team' }" @click="activeTab = 'team'">
+        Команда
+      </button>
     </nav>
     <MainDashboard v-if="activeTab === 'main'" />
     <div v-else-if="activeTab === 'work'" class="main">
@@ -28,13 +37,14 @@
       <section class="right">
         <div class="controls">
           <SlidersPanel />
-          <RatesPanel />
         </div>
         <ProjectCanvas />
         <SummaryPanel />
       </section>
     </div>
-    <InfrastructurePanel v-else />
+    <InfrastructurePanel v-else-if="activeTab === 'infra'" />
+    <ModulesPanel v-else-if="activeTab === 'modules'" />
+    <RatesPanel v-else />
   </div>
 </template>
 
@@ -49,13 +59,21 @@ import SummaryPanel from "./components/SummaryPanel.vue";
 import AiAssistant from "./components/AiAssistant.vue";
 import InfrastructurePanel from "./components/InfrastructurePanel.vue";
 import MainDashboard from "./components/MainDashboard.vue";
+import ModulesPanel from "./components/ModulesPanel.vue";
 
 const store = useProjectStore();
-const activeTab = ref<"main" | "work" | "infra">("main");
+const activeTab = ref<"main" | "work" | "infra" | "modules" | "team">("main");
+const isDark = ref(false);
 
 onMounted(() => {
   store.bootstrap();
+  isDark.value = localStorage.getItem("theme") === "dark";
 });
+
+function toggleTheme() {
+  isDark.value = !isDark.value;
+  localStorage.setItem("theme", isDark.value ? "dark" : "light");
+}
 </script>
 
 <style scoped>
@@ -82,6 +100,51 @@ onMounted(() => {
   --warning: #f59e0b;
   --input-bg: #ffffff;
   --canvas-line: #94a3b8;
+  --note-bg: #fde68a;
+  --note-border: #f59e0b;
+  --note-text: #111827;
+  --note-action: #b45309;
+  --chip-added-bg: #dcfce7;
+  --chip-added-border: #22c55e;
+  --chip-added-text: #15803d;
+  --chip-changed-bg: #fef9c3;
+  --chip-changed-border: #eab308;
+  --chip-changed-text: #854d0e;
+  --chip-removed-bg: #fee2e2;
+  --chip-removed-border: #ef4444;
+  --chip-removed-text: #991b1b;
+}
+.app.dark {
+  --bg: #0b1120;
+  --text: #e2e8f0;
+  --panel-bg: #0f172a;
+  --panel-shadow: 0 8px 24px rgba(15, 23, 42, 0.35);
+  --border: #1e293b;
+  --muted: #94a3b8;
+  --muted-2: #64748b;
+  --card-bg: #111827;
+  --grid: #111827;
+  --grid-line: #1e293b;
+  --accent: #38bdf8;
+  --accent-contrast: #0b1120;
+  --danger: #f87171;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --input-bg: #0b1220;
+  --canvas-line: #94a3b8;
+  --note-bg: #3f2f00;
+  --note-border: #a16207;
+  --note-text: #fde68a;
+  --note-action: #fbbf24;
+  --chip-added-bg: #064e3b;
+  --chip-added-border: #22c55e;
+  --chip-added-text: #a7f3d0;
+  --chip-changed-bg: #3f2f00;
+  --chip-changed-border: #eab308;
+  --chip-changed-text: #fef08a;
+  --chip-removed-bg: #450a0a;
+  --chip-removed-border: #ef4444;
+  --chip-removed-text: #fecaca;
 }
 .header {
   margin-bottom: 24px;
@@ -91,6 +154,14 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+.theme-toggle {
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: 10px;
+  cursor: pointer;
 }
 .header h1 {
   margin: 0 0 4px;

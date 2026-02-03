@@ -3,6 +3,13 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
+class ModuleRoleHours(BaseModel):
+    """Module role hours."""
+
+    role: str
+    hours: float = Field(ge=0)
+
+
 class ModuleBase(BaseModel):
     """Module base schema."""
 
@@ -12,6 +19,7 @@ class ModuleBase(BaseModel):
     hours_frontend: float
     hours_backend: float
     hours_qa: float
+    role_hours: list[ModuleRoleHours] = []
 
 
 class ModuleCreate(ModuleBase):
@@ -22,6 +30,123 @@ class ModuleOut(ModuleBase):
     """Module response schema."""
 
     id: int
+
+
+class ProjectNodeRoleHours(BaseModel):
+    """Mindmap node role hours."""
+
+    role: str
+    hours: float = Field(ge=0)
+
+
+class ProjectNodeBase(BaseModel):
+    """Mindmap node base schema."""
+
+    title: str
+    description: str = ""
+    module_id: int | None = None
+    is_ai: bool = False
+    hours_frontend: float = 0
+    hours_backend: float = 0
+    hours_qa: float = 0
+    uncertainty_level: str | None = None
+    uiux_level: str | None = None
+    legacy_code: bool | None = None
+    position_x: float = 0
+    position_y: float = 0
+    role_hours: list[ProjectNodeRoleHours] = []
+
+
+class ProjectNodeCreate(ProjectNodeBase):
+    """Mindmap node create payload."""
+
+
+class ProjectNodeOut(ProjectNodeBase):
+    """Mindmap node response."""
+
+    id: int
+
+
+class ProjectNodeConnectionBase(BaseModel):
+    """Connection between mindmap nodes."""
+
+    from_node_id: int
+    to_node_id: int
+
+
+class ProjectNodeConnectionOut(ProjectNodeConnectionBase):
+    """Mindmap connection response."""
+
+    id: int
+
+
+class ProjectNoteBase(BaseModel):
+    """Mindmap note payload."""
+
+    content: str = ""
+    position_x: float = 0
+    position_y: float = 0
+
+
+class ProjectNoteOut(ProjectNoteBase):
+    """Mindmap note response."""
+
+    id: int
+
+
+class MindmapSnapshotNode(BaseModel):
+    """Mindmap snapshot node."""
+
+    key: str
+    title: str
+    description: str = ""
+    module_id: int | None = None
+    is_ai: bool = False
+    hours_frontend: float = 0
+    hours_backend: float = 0
+    hours_qa: float = 0
+    uncertainty_level: str | None = None
+    uiux_level: str | None = None
+    legacy_code: bool | None = None
+    position_x: float = 0
+    position_y: float = 0
+    role_hours: list[ProjectNodeRoleHours] = []
+
+
+class MindmapSnapshotConnection(BaseModel):
+    """Mindmap snapshot connection."""
+
+    from_key: str
+    to_key: str
+
+
+class MindmapSnapshot(BaseModel):
+    """Mindmap snapshot payload."""
+
+    nodes: list[MindmapSnapshotNode]
+    connections: list[MindmapSnapshotConnection]
+    notes: list[ProjectNoteBase]
+
+
+class MindmapVersionCreate(BaseModel):
+    """Mindmap version create payload."""
+
+    title: str
+    snapshot: MindmapSnapshot
+
+
+class MindmapVersionOut(BaseModel):
+    """Mindmap version response."""
+
+    id: int
+    title: str
+    created_at: str
+
+
+class MindmapVersionDetailOut(MindmapVersionOut):
+    """Mindmap version with snapshot."""
+
+    snapshot: MindmapSnapshot
 
 
 class InfrastructureItemBase(BaseModel):
@@ -217,4 +342,38 @@ class AiParseResponse(BaseModel):
 
     suggestions: list[AiModuleSuggestion]
     tasks: list[AiWbsTask]
+    rationale: str
+
+
+class AiMindmapNode(BaseModel):
+    """AI mindmap node."""
+
+    key: str
+    title: str
+    details: str = ""
+    module_code: str = ""
+    hours_frontend: float = 0
+    hours_backend: float = 0
+    hours_qa: float = 0
+    role_hours: list[ModuleRoleHours] = []
+
+
+class AiMindmapConnection(BaseModel):
+    """AI mindmap connection."""
+
+    from_key: str
+    to_key: str
+
+
+class AiMindmapRequest(BaseModel):
+    """AI mindmap request."""
+
+    prompt: str
+
+
+class AiMindmapResponse(BaseModel):
+    """AI mindmap response."""
+
+    nodes: list[AiMindmapNode]
+    connections: list[AiMindmapConnection]
     rationale: str
