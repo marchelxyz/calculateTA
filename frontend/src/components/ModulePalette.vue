@@ -105,14 +105,14 @@ function slugify(value: string) {
 
 <style scoped>
 .panel {
-  background: white;
+  background: var(--panel-bg);
   padding: 16px;
   border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--panel-shadow);
 }
 .hint {
   margin-top: 0;
-  color: #64748b;
+  color: var(--muted);
   font-size: 14px;
 }
 .list {
@@ -122,10 +122,10 @@ function slugify(value: string) {
 }
 .card {
   padding: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   border-radius: 12px;
   cursor: pointer;
-  background: #f8fafc;
+  background: var(--card-bg);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -135,7 +135,7 @@ function slugify(value: string) {
 }
 .card span {
   font-size: 12px;
-  color: #64748b;
+  color: var(--muted);
 }
 .creator {
   margin-top: 16px;
@@ -149,7 +149,7 @@ function slugify(value: string) {
 .creator-hint {
   margin: 0 0 10px;
   font-size: 12px;
-  color: #64748b;
+  color: var(--muted);
 }
 .creator-grid {
   display: grid;
@@ -158,7 +158,7 @@ function slugify(value: string) {
 }
 .creator-grid label {
   font-size: 12px;
-  color: #475569;
+  color: var(--muted);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -169,12 +169,14 @@ function slugify(value: string) {
 .creator-grid input {
   padding: 6px 8px;
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
 }
 .primary {
   margin-top: 10px;
-  background: #2563eb;
-  color: white;
+  background: var(--accent);
+  color: var(--accent-contrast);
   border: none;
   padding: 8px 14px;
   border-radius: 10px;

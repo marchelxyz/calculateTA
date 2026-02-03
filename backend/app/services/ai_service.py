@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 
 from openai import OpenAI
@@ -19,6 +20,9 @@ class ModuleCatalogItem:
     code: str
     name: str
     description: str
+
+
+logger = logging.getLogger(__name__)
 
 
 def parse_prompt_with_ai(session: Session, prompt: str) -> AiParseResponse:
@@ -54,22 +58,28 @@ def _parse_with_openai(
     """Request OpenAI WBS decomposition."""
     client = OpenAI(api_key=settings.openai_api_key)
     system_prompt = _build_system_prompt(catalog)
-    response = client.chat.completions.create(
-        model=settings.openai_model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt},
-        ],
-        timeout=settings.openai_timeout_seconds,
-    )
-    content = response.choices[0].message.content or ""
-    data = _safe_json_loads(content)
-    tasks = _parse_tasks(data.get("tasks", []), catalog_index)
-    suggestions = _parse_suggestions(data.get("suggestions", []), catalog_index)
-    if not suggestions:
-        suggestions = _suggest_from_tasks(tasks)
-    rationale = data.get("rationale", "AI analysis")
-    return AiParseResponse(suggestions=suggestions, tasks=tasks, rationale=rationale)
+    try:
+        response = client.chat.completions.create(
+            model=settings.openai_model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt},
+            ],
+            timeout=settings.openai_timeout_seconds,
+        )
+        content = response.choices[0].message.content or ""
+        if not content:
+            logger.warning("OpenAI returned empty response content.")
+        data = _safe_json_loads(content)
+        tasks = _parse_tasks(data.get("tasks", []), catalog_index)
+        suggestions = _parse_suggestions(data.get("suggestions", []), catalog_index)
+        if not suggestions:
+            suggestions = _suggest_from_tasks(tasks)
+        rationale = data.get("rationale", "AI analysis")
+        return AiParseResponse(suggestions=suggestions, tasks=tasks, rationale=rationale)
+    except Exception:
+        logger.exception("OpenAI request failed. Falling back to heuristics.")
+        return _parse_with_heuristics(prompt, catalog, catalog_index)
 
 
 def _build_system_prompt(catalog: list[ModuleCatalogItem]) -> str:

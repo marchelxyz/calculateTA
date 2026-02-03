@@ -98,21 +98,23 @@ async function addSuggested() {
 
 <style scoped>
 .panel {
-  background: white;
+  background: var(--panel-bg);
   padding: 16px;
   border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--panel-shadow);
 }
 .hint {
   margin: 0 0 10px;
   font-size: 12px;
-  color: #64748b;
+  color: var(--muted);
 }
 textarea {
   width: 100%;
   min-height: 100px;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
   padding: 10px;
   resize: vertical;
 }
@@ -122,8 +124,8 @@ textarea {
   gap: 10px;
 }
 .primary {
-  background: #2563eb;
-  color: white;
+  background: var(--accent);
+  color: var(--accent-contrast);
   border: none;
   padding: 8px 12px;
   border-radius: 10px;
@@ -131,10 +133,11 @@ textarea {
 }
 .ghost {
   background: transparent;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   padding: 8px 12px;
   border-radius: 10px;
   cursor: pointer;
+  color: var(--text);
 }
 .results {
   margin-top: 12px;
@@ -148,7 +151,7 @@ textarea {
   color: #0f172a;
 }
 .item {
-  background: #f8fafc;
+  background: var(--card-bg);
   padding: 8px;
   border-radius: 10px;
   display: flex;
@@ -158,10 +161,10 @@ textarea {
 }
 .rationale {
   font-size: 12px;
-  color: #64748b;
+  color: var(--muted);
 }
 .empty {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--muted-2);
 }
 </style>

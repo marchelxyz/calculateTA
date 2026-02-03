@@ -52,7 +52,7 @@
                 <span v-if="linkMode.fromId === element.id" class="link-badge">
                   Источник связи
                 </span>
-                <button class="ghost" @click="store.removeProjectModule(element.id)">
+              <button class="ghost danger" @click="store.removeProjectModule(element.id)">
                   Удалить
                 </button>
               </header>
@@ -181,7 +181,7 @@
                 <span v-if="linkMode.fromId === element.id" class="link-badge">
                   Источник связи
                 </span>
-                <button class="ghost" @click="store.removeProjectModule(element.id)">
+                <button class="ghost danger" @click="store.removeProjectModule(element.id)">
                   Удалить
                 </button>
               </header>
@@ -700,10 +700,10 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .panel {
-  background: white;
+  background: var(--panel-bg);
   padding: 16px;
   border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--panel-shadow);
 }
 .panel-header {
   display: flex;
@@ -718,9 +718,10 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
 }
 .actions .ghost {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   padding: 6px 10px;
   border-radius: 8px;
+  color: var(--text);
 }
 .zoom-controls {
   display: inline-flex;
@@ -728,11 +729,11 @@ onBeforeUnmount(() => {
   gap: 6px;
   padding: 4px;
   border-radius: 10px;
-  background: #f8fafc;
+  background: var(--card-bg);
 }
 .zoom-controls span {
   font-size: 12px;
-  color: #475569;
+  color: var(--muted);
   min-width: 44px;
   text-align: center;
 }
@@ -742,26 +743,27 @@ onBeforeUnmount(() => {
 .hint {
   margin: 6px 0 0;
   font-size: 12px;
-  color: #64748b;
+  color: var(--muted);
   display: flex;
   align-items: center;
   gap: 8px;
 }
 .link-cancel {
   background: transparent;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   padding: 2px 6px;
   border-radius: 6px;
   cursor: pointer;
+  color: var(--text);
 }
 .canvas-surface {
   min-height: 420px;
   padding: 16px;
   border-radius: 14px;
-  border: 1px dashed #cbd5f5;
+  border: 1px dashed var(--grid-line);
   background-image:
-    linear-gradient(#eef2ff 1px, transparent 1px),
-    linear-gradient(90deg, #eef2ff 1px, transparent 1px);
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
   background-size: 24px 24px;
   position: relative;
   overflow: auto;
@@ -781,7 +783,7 @@ onBeforeUnmount(() => {
 }
 .canvas-lines path {
   fill: none;
-  stroke: #94a3b8;
+  stroke: var(--canvas-line);
   stroke-width: 2;
 }
 .canvas-nodes {
@@ -796,10 +798,10 @@ onBeforeUnmount(() => {
 }
 .module-card {
   width: min(420px, 100%);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   border-radius: 14px;
   padding: 12px;
-  background: #f8fafc;
+  background: var(--card-bg);
 }
 .module-card.absolute {
   position: absolute;
@@ -814,13 +816,13 @@ onBeforeUnmount(() => {
 }
 .module-header small {
   display: block;
-  color: #64748b;
+  color: var(--muted);
   margin-top: 2px;
 }
 .link-badge {
   font-size: 11px;
-  color: #2563eb;
-  background: #eff6ff;
+  color: var(--accent);
+  background: var(--grid);
   padding: 2px 6px;
   border-radius: 999px;
   margin-left: auto;
@@ -839,7 +841,7 @@ onBeforeUnmount(() => {
 }
 label {
   font-size: 12px;
-  color: #475569;
+  color: var(--muted);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -848,7 +850,9 @@ input,
 select {
   padding: 6px 8px;
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
 }
 .checkbox {
   flex-direction: row;
@@ -858,19 +862,22 @@ select {
 .ghost {
   background: transparent;
   border: none;
-  color: #ef4444;
+  color: var(--text);
   cursor: pointer;
+}
+.ghost.danger {
+  color: var(--danger);
 }
 .context-menu {
   position: absolute;
-  background: white;
-  border: 1px solid #e2e8f0;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 8px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+  box-shadow: var(--panel-shadow);
   z-index: 5;
 }
 .context-menu button {
@@ -880,16 +887,17 @@ select {
   padding: 6px 8px;
   border-radius: 8px;
   cursor: pointer;
+  color: var(--text);
 }
 .context-menu button:hover {
-  background: #f1f5f9;
+  background: var(--card-bg);
 }
 .context-menu .danger {
-  color: #ef4444;
+  color: var(--danger);
 }
 .empty {
   padding: 20px;
   text-align: center;
-  color: #94a3b8;
+  color: var(--muted-2);
 }
 </style>

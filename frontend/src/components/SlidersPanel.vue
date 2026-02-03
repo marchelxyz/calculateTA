@@ -66,10 +66,10 @@ function updateLegacy(event: Event) {
 
 <style scoped>
 .panel {
-  background: white;
+  background: var(--panel-bg);
   padding: 16px;
   border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--panel-shadow);
 }
 .content {
   display: flex;
@@ -78,7 +78,7 @@ function updateLegacy(event: Event) {
 }
 label {
   font-size: 12px;
-  color: #475569;
+  color: var(--muted);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -86,7 +86,9 @@ label {
 select {
   padding: 6px 8px;
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
 }
 .checkbox {
   flex-direction: row;
