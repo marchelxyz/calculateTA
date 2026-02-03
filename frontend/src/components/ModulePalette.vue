@@ -18,35 +18,13 @@
     </Draggable>
     <div class="creator">
       <h3>Новый модуль</h3>
-      <p class="creator-hint">
-        Часы — это базовая оценка трудозатрат по ролям (FE/BE/QA).
-        Эти значения участвуют в расчете стоимости и сроков.
-      </p>
       <div class="creator-grid">
-        <label>
-          Название
-          <input v-model="draft.name" placeholder="Например: Личный кабинет" />
-        </label>
-        <label>
-          Код
-          <input v-model="draft.code" placeholder="autofill если пусто" />
-        </label>
-        <label class="wide">
-          Описание
-          <input v-model="draft.description" placeholder="Кратко: что входит" />
-        </label>
-        <label>
-          FE часы
-          <input type="number" v-model.number="draft.hours_frontend" placeholder="8" />
-        </label>
-        <label>
-          BE часы
-          <input type="number" v-model.number="draft.hours_backend" placeholder="12" />
-        </label>
-        <label>
-          QA часы
-          <input type="number" v-model.number="draft.hours_qa" placeholder="4" />
-        </label>
+        <input v-model="draft.name" placeholder="Название" />
+        <input v-model="draft.code" placeholder="Код (optional)" />
+        <input v-model="draft.description" placeholder="Описание" />
+        <input type="number" v-model.number="draft.hours_frontend" placeholder="FE часы" />
+        <input type="number" v-model.number="draft.hours_backend" placeholder="BE часы" />
+        <input type="number" v-model.number="draft.hours_qa" placeholder="QA часы" />
       </div>
       <button class="primary" @click="createModule">Добавить модуль</button>
     </div>
@@ -146,25 +124,10 @@ function slugify(value: string) {
   margin: 0 0 8px;
   font-size: 14px;
 }
-.creator-hint {
-  margin: 0 0 10px;
-  font-size: 12px;
-  color: #64748b;
-}
 .creator-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 8px;
-}
-.creator-grid label {
-  font-size: 12px;
-  color: #475569;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.creator-grid .wide {
-  grid-column: span 2;
 }
 .creator-grid input {
   padding: 6px 8px;

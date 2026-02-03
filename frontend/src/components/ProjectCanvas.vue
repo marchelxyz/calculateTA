@@ -10,12 +10,6 @@
         </p>
       </div>
       <div class="actions">
-        <div class="zoom-controls">
-          <button class="ghost" @click="zoomOut">-</button>
-          <span>{{ Math.round(zoom * 100) }}%</span>
-          <button class="ghost" @click="zoomIn">+</button>
-          <button class="ghost" @click="resetZoom">Сброс</button>
-        </div>
         <button class="ghost" @click="toggleMindmap">
           {{ mindmapMode ? "Свободная раскладка" : "Режим XMind" }}
         </button>
@@ -25,268 +19,266 @@
       </div>
     </div>
     <div class="canvas-surface" ref="canvasRef" @click="hideContextMenu">
-      <div class="canvas-zoom" :style="zoomStyle">
-        <svg v-if="lines.length" class="canvas-lines">
-          <path
-            v-for="(line, index) in lines"
-            :key="index"
-            :d="linePath(line)"
-          />
-        </svg>
-        <template v-if="mindmapMode">
-          <div class="mindmap-nodes">
-            <div
-              v-for="element in store.projectModules"
-              :key="element.id"
-              class="module-card absolute"
-              :ref="(el) => setNodeRef(el, element.id)"
-              :style="nodeStyle(element.id)"
-              @contextmenu="openContextMenu($event, element.id)"
-              @click.stop="handleNodeClick(element.id)"
-            >
-              <header class="module-header">
-                <div>
-                  <strong>{{ moduleName(element.module_id) }}</strong>
-                  <small v-if="element.custom_name">{{ element.custom_name }}</small>
-                </div>
-                <span v-if="linkMode.fromId === element.id" class="link-badge">
-                  Источник связи
-                </span>
-                <button class="ghost" @click="store.removeProjectModule(element.id)">
-                  Удалить
-                </button>
-              </header>
-              <div class="module-body">
-                <div class="grid">
-                  <label>
-                    FE часы
-                    <input
-                      type="number"
-                      :value="element.override_frontend ?? baseHours(element.module_id).hours_frontend"
-                      @change="updateHours(element, 'override_frontend', $event)"
-                    />
-                  </label>
-                  <label>
-                    BE часы
-                    <input
-                      type="number"
-                      :value="element.override_backend ?? baseHours(element.module_id).hours_backend"
-                      @change="updateHours(element, 'override_backend', $event)"
-                    />
-                  </label>
-                  <label>
-                    QA часы
-                    <input
-                      type="number"
-                      :value="element.override_qa ?? baseHours(element.module_id).hours_qa"
-                      @change="updateHours(element, 'override_qa', $event)"
-                    />
-                  </label>
-                </div>
-                <div class="grid">
-                  <label>
-                    Неопределенность
-                    <select
-                      :value="element.uncertainty_level ?? store.project?.uncertainty_level"
-                      @change="updateSelect(element, 'uncertainty_level', $event)"
-                    >
-                      <option value="known">Делали 100 раз</option>
-                      <option value="new_tech">Новая технология</option>
-                    </select>
-                  </label>
-                  <label>
-                    UI/UX
-                    <select
-                      :value="element.uiux_level ?? store.project?.uiux_level"
-                      @change="updateSelect(element, 'uiux_level', $event)"
-                    >
-                      <option value="mvp">MVP / Bootstrap</option>
-                      <option value="award">Award Winning</option>
-                    </select>
-                  </label>
-                  <label class="checkbox">
-                    <input
-                      type="checkbox"
-                      :checked="element.legacy_code ?? store.project?.legacy_code"
-                      @change="updateCheckbox(element, 'legacy_code', $event)"
-                    />
-                    Legacy code
-                  </label>
-                </div>
-                <div class="grid">
-                  <label>
-                    FE роль
-                    <select
-                      :value="assignmentLevel(element.id, 'frontend')"
-                      @change="assignRole(element.id, 'frontend', $event)"
-                    >
-                      <option value="junior">Junior</option>
-                      <option value="middle">Middle</option>
-                      <option value="senior">Senior</option>
-                    </select>
-                  </label>
-                  <label>
-                    BE роль
-                    <select
-                      :value="assignmentLevel(element.id, 'backend')"
-                      @change="assignRole(element.id, 'backend', $event)"
-                    >
-                      <option value="junior">Junior</option>
-                      <option value="middle">Middle</option>
-                      <option value="senior">Senior</option>
-                    </select>
-                  </label>
-                  <label>
-                    QA роль
-                    <select
-                      :value="assignmentLevel(element.id, 'qa')"
-                      @change="assignRole(element.id, 'qa', $event)"
-                    >
-                      <option value="junior">Junior</option>
-                      <option value="middle">Middle</option>
-                      <option value="senior">Senior</option>
-                    </select>
-                  </label>
-                </div>
+      <svg v-if="lines.length" class="canvas-lines">
+        <path
+          v-for="(line, index) in lines"
+          :key="index"
+          :d="linePath(line)"
+        />
+      </svg>
+      <template v-if="mindmapMode">
+        <div class="mindmap-nodes">
+          <div
+            v-for="element in store.projectModules"
+            :key="element.id"
+            class="module-card absolute"
+            :ref="(el) => setNodeRef(el, element.id)"
+            :style="nodeStyle(element.id)"
+            @contextmenu="openContextMenu($event, element.id)"
+            @click.stop="handleNodeClick(element.id)"
+          >
+            <header class="module-header">
+              <div>
+                <strong>{{ moduleName(element.module_id) }}</strong>
+                <small v-if="element.custom_name">{{ element.custom_name }}</small>
+              </div>
+              <span v-if="linkMode.fromId === element.id" class="link-badge">
+                Источник связи
+              </span>
+              <button class="ghost" @click="store.removeProjectModule(element.id)">
+                Удалить
+              </button>
+            </header>
+            <div class="module-body">
+              <div class="grid">
+                <label>
+                  FE часы
+                  <input
+                    type="number"
+                    :value="element.override_frontend ?? baseHours(element.module_id).hours_frontend"
+                    @change="updateHours(element, 'override_frontend', $event)"
+                  />
+                </label>
+                <label>
+                  BE часы
+                  <input
+                    type="number"
+                    :value="element.override_backend ?? baseHours(element.module_id).hours_backend"
+                    @change="updateHours(element, 'override_backend', $event)"
+                  />
+                </label>
+                <label>
+                  QA часы
+                  <input
+                    type="number"
+                    :value="element.override_qa ?? baseHours(element.module_id).hours_qa"
+                    @change="updateHours(element, 'override_qa', $event)"
+                  />
+                </label>
+              </div>
+              <div class="grid">
+                <label>
+                  Неопределенность
+                  <select
+                    :value="element.uncertainty_level ?? store.project?.uncertainty_level"
+                    @change="updateSelect(element, 'uncertainty_level', $event)"
+                  >
+                    <option value="known">Делали 100 раз</option>
+                    <option value="new_tech">Новая технология</option>
+                  </select>
+                </label>
+                <label>
+                  UI/UX
+                  <select
+                    :value="element.uiux_level ?? store.project?.uiux_level"
+                    @change="updateSelect(element, 'uiux_level', $event)"
+                  >
+                    <option value="mvp">MVP / Bootstrap</option>
+                    <option value="award">Award Winning</option>
+                  </select>
+                </label>
+                <label class="checkbox">
+                  <input
+                    type="checkbox"
+                    :checked="element.legacy_code ?? store.project?.legacy_code"
+                    @change="updateCheckbox(element, 'legacy_code', $event)"
+                  />
+                  Legacy code
+                </label>
+              </div>
+              <div class="grid">
+                <label>
+                  FE роль
+                  <select
+                    :value="assignmentLevel(element.id, 'frontend')"
+                    @change="assignRole(element.id, 'frontend', $event)"
+                  >
+                    <option value="junior">Junior</option>
+                    <option value="middle">Middle</option>
+                    <option value="senior">Senior</option>
+                  </select>
+                </label>
+                <label>
+                  BE роль
+                  <select
+                    :value="assignmentLevel(element.id, 'backend')"
+                    @change="assignRole(element.id, 'backend', $event)"
+                  >
+                    <option value="junior">Junior</option>
+                    <option value="middle">Middle</option>
+                    <option value="senior">Senior</option>
+                  </select>
+                </label>
+                <label>
+                  QA роль
+                  <select
+                    :value="assignmentLevel(element.id, 'qa')"
+                    @change="assignRole(element.id, 'qa', $event)"
+                  >
+                    <option value="junior">Junior</option>
+                    <option value="middle">Middle</option>
+                    <option value="senior">Senior</option>
+                  </select>
+                </label>
               </div>
             </div>
-            <div v-if="store.projectModules.length === 0" class="empty">
-              Перетащите модули сюда
+          </div>
+          <div v-if="store.projectModules.length === 0" class="empty">
+            Перетащите модули сюда
+          </div>
+        </div>
+      </template>
+      <Draggable
+        v-else
+        class="canvas-nodes"
+        :list="store.projectModules"
+        :group="{ name: 'modules', pull: false, put: true }"
+        item-key="id"
+        :sort="true"
+        :animation="160"
+        @add="handleAdd"
+        @end="handleDragEnd"
+      >
+        <template #item="{ element }">
+          <div
+            class="module-card"
+            :ref="(el) => setNodeRef(el, element.id)"
+            @contextmenu="openContextMenu($event, element.id)"
+            @click.stop="handleNodeClick(element.id)"
+          >
+            <header class="module-header">
+              <div>
+                <strong>{{ moduleName(element.module_id) }}</strong>
+                <small v-if="element.custom_name">{{ element.custom_name }}</small>
+              </div>
+              <span v-if="linkMode.fromId === element.id" class="link-badge">
+                Источник связи
+              </span>
+              <button class="ghost" @click="store.removeProjectModule(element.id)">
+                Удалить
+              </button>
+            </header>
+            <div class="module-body">
+              <div class="grid">
+                <label>
+                  FE часы
+                  <input
+                    type="number"
+                    :value="element.override_frontend ?? baseHours(element.module_id).hours_frontend"
+                    @change="updateHours(element, 'override_frontend', $event)"
+                  />
+                </label>
+                <label>
+                  BE часы
+                  <input
+                    type="number"
+                    :value="element.override_backend ?? baseHours(element.module_id).hours_backend"
+                    @change="updateHours(element, 'override_backend', $event)"
+                  />
+                </label>
+                <label>
+                  QA часы
+                  <input
+                    type="number"
+                    :value="element.override_qa ?? baseHours(element.module_id).hours_qa"
+                    @change="updateHours(element, 'override_qa', $event)"
+                  />
+                </label>
+              </div>
+              <div class="grid">
+                <label>
+                  Неопределенность
+                  <select
+                    :value="element.uncertainty_level ?? store.project?.uncertainty_level"
+                    @change="updateSelect(element, 'uncertainty_level', $event)"
+                  >
+                    <option value="known">Делали 100 раз</option>
+                    <option value="new_tech">Новая технология</option>
+                  </select>
+                </label>
+                <label>
+                  UI/UX
+                  <select
+                    :value="element.uiux_level ?? store.project?.uiux_level"
+                    @change="updateSelect(element, 'uiux_level', $event)"
+                  >
+                    <option value="mvp">MVP / Bootstrap</option>
+                    <option value="award">Award Winning</option>
+                  </select>
+                </label>
+                <label class="checkbox">
+                  <input
+                    type="checkbox"
+                    :checked="element.legacy_code ?? store.project?.legacy_code"
+                    @change="updateCheckbox(element, 'legacy_code', $event)"
+                  />
+                  Legacy code
+                </label>
+              </div>
+              <div class="grid">
+                <label>
+                  FE роль
+                  <select
+                    :value="assignmentLevel(element.id, 'frontend')"
+                    @change="assignRole(element.id, 'frontend', $event)"
+                  >
+                    <option value="junior">Junior</option>
+                    <option value="middle">Middle</option>
+                    <option value="senior">Senior</option>
+                  </select>
+                </label>
+                <label>
+                  BE роль
+                  <select
+                    :value="assignmentLevel(element.id, 'backend')"
+                    @change="assignRole(element.id, 'backend', $event)"
+                  >
+                    <option value="junior">Junior</option>
+                    <option value="middle">Middle</option>
+                    <option value="senior">Senior</option>
+                  </select>
+                </label>
+                <label>
+                  QA роль
+                  <select
+                    :value="assignmentLevel(element.id, 'qa')"
+                    @change="assignRole(element.id, 'qa', $event)"
+                  >
+                    <option value="junior">Junior</option>
+                    <option value="middle">Middle</option>
+                    <option value="senior">Senior</option>
+                  </select>
+                </label>
+              </div>
             </div>
           </div>
         </template>
-        <Draggable
-          v-else
-          class="canvas-nodes"
-          :list="store.projectModules"
-          :group="{ name: 'modules', pull: false, put: true }"
-          item-key="id"
-          :sort="true"
-          :animation="160"
-          @add="handleAdd"
-          @end="handleDragEnd"
-        >
-          <template #item="{ element }">
-            <div
-              class="module-card"
-              :ref="(el) => setNodeRef(el, element.id)"
-              @contextmenu="openContextMenu($event, element.id)"
-              @click.stop="handleNodeClick(element.id)"
-            >
-              <header class="module-header">
-                <div>
-                  <strong>{{ moduleName(element.module_id) }}</strong>
-                  <small v-if="element.custom_name">{{ element.custom_name }}</small>
-                </div>
-                <span v-if="linkMode.fromId === element.id" class="link-badge">
-                  Источник связи
-                </span>
-                <button class="ghost" @click="store.removeProjectModule(element.id)">
-                  Удалить
-                </button>
-              </header>
-              <div class="module-body">
-                <div class="grid">
-                  <label>
-                    FE часы
-                    <input
-                      type="number"
-                      :value="element.override_frontend ?? baseHours(element.module_id).hours_frontend"
-                      @change="updateHours(element, 'override_frontend', $event)"
-                    />
-                  </label>
-                  <label>
-                    BE часы
-                    <input
-                      type="number"
-                      :value="element.override_backend ?? baseHours(element.module_id).hours_backend"
-                      @change="updateHours(element, 'override_backend', $event)"
-                    />
-                  </label>
-                  <label>
-                    QA часы
-                    <input
-                      type="number"
-                      :value="element.override_qa ?? baseHours(element.module_id).hours_qa"
-                      @change="updateHours(element, 'override_qa', $event)"
-                    />
-                  </label>
-                </div>
-                <div class="grid">
-                  <label>
-                    Неопределенность
-                    <select
-                      :value="element.uncertainty_level ?? store.project?.uncertainty_level"
-                      @change="updateSelect(element, 'uncertainty_level', $event)"
-                    >
-                      <option value="known">Делали 100 раз</option>
-                      <option value="new_tech">Новая технология</option>
-                    </select>
-                  </label>
-                  <label>
-                    UI/UX
-                    <select
-                      :value="element.uiux_level ?? store.project?.uiux_level"
-                      @change="updateSelect(element, 'uiux_level', $event)"
-                    >
-                      <option value="mvp">MVP / Bootstrap</option>
-                      <option value="award">Award Winning</option>
-                    </select>
-                  </label>
-                  <label class="checkbox">
-                    <input
-                      type="checkbox"
-                      :checked="element.legacy_code ?? store.project?.legacy_code"
-                      @change="updateCheckbox(element, 'legacy_code', $event)"
-                    />
-                    Legacy code
-                  </label>
-                </div>
-                <div class="grid">
-                  <label>
-                    FE роль
-                    <select
-                      :value="assignmentLevel(element.id, 'frontend')"
-                      @change="assignRole(element.id, 'frontend', $event)"
-                    >
-                      <option value="junior">Junior</option>
-                      <option value="middle">Middle</option>
-                      <option value="senior">Senior</option>
-                    </select>
-                  </label>
-                  <label>
-                    BE роль
-                    <select
-                      :value="assignmentLevel(element.id, 'backend')"
-                      @change="assignRole(element.id, 'backend', $event)"
-                    >
-                      <option value="junior">Junior</option>
-                      <option value="middle">Middle</option>
-                      <option value="senior">Senior</option>
-                    </select>
-                  </label>
-                  <label>
-                    QA роль
-                    <select
-                      :value="assignmentLevel(element.id, 'qa')"
-                      @change="assignRole(element.id, 'qa', $event)"
-                    >
-                      <option value="junior">Junior</option>
-                      <option value="middle">Middle</option>
-                      <option value="senior">Senior</option>
-                    </select>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </template>
-          <template #footer>
-            <div v-if="store.projectModules.length === 0" class="empty">
-              Перетащите модули сюда
-            </div>
-          </template>
-        </Draggable>
-      </div>
+        <template #footer>
+          <div v-if="store.projectModules.length === 0" class="empty">
+            Перетащите модули сюда
+          </div>
+        </template>
+      </Draggable>
       <div
         v-if="contextMenu.visible"
         class="context-menu"
@@ -319,7 +311,6 @@ const linkMode = ref<{ active: boolean; fromId: number | null }>({
 });
 const mindmapMode = ref(false);
 const mindmapPositions = ref<Record<number, { x: number; y: number }>>({});
-const zoom = ref(1);
 const contextMenu = ref({
   visible: false,
   x: 0,
@@ -486,27 +477,6 @@ function toggleMindmap() {
     buildMindmapLayout();
     updateLines();
   });
-}
-
-const zoomStyle = computed(() => {
-  return {
-    transform: `scale(${zoom.value})`,
-  };
-});
-
-function zoomIn() {
-  zoom.value = Math.min(1.6, Number((zoom.value + 0.1).toFixed(2)));
-  scheduleLineUpdate();
-}
-
-function zoomOut() {
-  zoom.value = Math.max(0.6, Number((zoom.value - 0.1).toFixed(2)));
-  scheduleLineUpdate();
-}
-
-function resetZoom() {
-  zoom.value = 1;
-  scheduleLineUpdate();
 }
 
 function nodeStyle(moduleId: number) {
@@ -715,26 +685,11 @@ onBeforeUnmount(() => {
 .actions {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
 }
 .actions .ghost {
   border: 1px solid #e2e8f0;
   padding: 6px 10px;
   border-radius: 8px;
-}
-.zoom-controls {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px;
-  border-radius: 10px;
-  background: #f8fafc;
-}
-.zoom-controls span {
-  font-size: 12px;
-  color: #475569;
-  min-width: 44px;
-  text-align: center;
 }
 .panel-header h2 {
   margin: 0;
@@ -764,13 +719,6 @@ onBeforeUnmount(() => {
     linear-gradient(90deg, #eef2ff 1px, transparent 1px);
   background-size: 24px 24px;
   position: relative;
-  overflow: auto;
-}
-.canvas-zoom {
-  position: relative;
-  transform-origin: top left;
-  width: fit-content;
-  min-width: 100%;
 }
 .canvas-lines {
   position: absolute;
