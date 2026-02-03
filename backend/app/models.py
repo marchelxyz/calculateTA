@@ -73,6 +73,10 @@ class Project(Base):
         back_populates="project",
         cascade="all, delete-orphan",
     )
+    infrastructure: Mapped[list["ProjectInfrastructure"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
     coefficients: Mapped[list["ProjectCoefficient"]] = relationship(
         back_populates="project",
         cascade="all, delete-orphan",
@@ -142,3 +146,38 @@ class ProjectCoefficient(Base):
     multiplier: Mapped[float] = mapped_column(Float, default=1.0)
 
     project: Mapped[Project] = relationship(back_populates="coefficients")
+class InfrastructureItem(Base):
+    """Infrastructure catalog item."""
+
+    __tablename__ = "infrastructure_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    code: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(128))
+    description: Mapped[str] = mapped_column(Text, default="")
+    unit_cost: Mapped[float] = mapped_column(Float, default=0)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    project_infrastructure: Mapped[list["ProjectInfrastructure"]] = relationship(
+        back_populates="infrastructure_item",
+        cascade="all, delete-orphan",
+    )
+
+
+class ProjectInfrastructure(Base):
+    """Infrastructure item usage inside a project."""
+
+    __tablename__ = "project_infrastructure"
+    __table_args__ = (UniqueConstraint("project_id", "infrastructure_item_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    infrastructure_item_id: Mapped[int] = mapped_column(ForeignKey("infrastructure_items.id"))
+    quantity: Mapped[int] = mapped_column(Integer, default=1)
+
+    project: Mapped[Project] = relationship(back_populates="infrastructure")
+    infrastructure_item: Mapped[InfrastructureItem] = relationship(
+        back_populates="project_infrastructure"
+    )

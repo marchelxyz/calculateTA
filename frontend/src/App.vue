@@ -1,17 +1,26 @@
 <template>
-  <div class="app" :class="{ dark: isDark }">
+  <div class="app">
     <header class="header">
       <div class="header-top">
         <div>
           <h1>Центр управления полетами</h1>
           <p>Интерактивный конструктор проекта с пересчетом денег и времени.</p>
         </div>
-        <button class="theme-toggle" @click="toggleTheme">
-          {{ isDark ? "Светлая тема" : "Темная тема" }}
-        </button>
       </div>
     </header>
-    <div class="main">
+    <nav class="tabs">
+      <button :class="{ active: activeTab === 'main' }" @click="activeTab = 'main'">
+        Главная
+      </button>
+      <button :class="{ active: activeTab === 'work' }" @click="activeTab = 'work'">
+        Работы
+      </button>
+      <button :class="{ active: activeTab === 'infra' }" @click="activeTab = 'infra'">
+        Инфраструктура
+      </button>
+    </nav>
+    <MainDashboard v-if="activeTab === 'main'" />
+    <div v-else-if="activeTab === 'work'" class="main">
       <aside class="left">
         <ModulePalette />
         <AiAssistant />
@@ -25,11 +34,12 @@
         <SummaryPanel />
       </section>
     </div>
+    <InfrastructurePanel v-else />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
+import { onMounted, ref } from "vue";
 import { useProjectStore } from "./stores/project";
 import ModulePalette from "./components/ModulePalette.vue";
 import ProjectCanvas from "./components/ProjectCanvas.vue";
@@ -37,31 +47,15 @@ import SlidersPanel from "./components/SlidersPanel.vue";
 import RatesPanel from "./components/RatesPanel.vue";
 import SummaryPanel from "./components/SummaryPanel.vue";
 import AiAssistant from "./components/AiAssistant.vue";
+import InfrastructurePanel from "./components/InfrastructurePanel.vue";
+import MainDashboard from "./components/MainDashboard.vue";
 
 const store = useProjectStore();
-const isDark = ref(false);
+const activeTab = ref<"main" | "work" | "infra">("main");
 
 onMounted(() => {
-  loadTheme();
   store.bootstrap();
 });
-
-watch(isDark, (value) => {
-  saveTheme(value);
-});
-
-function toggleTheme() {
-  isDark.value = !isDark.value;
-}
-
-function loadTheme() {
-  const stored = localStorage.getItem("theme");
-  isDark.value = stored === "dark";
-}
-
-function saveTheme(value: boolean) {
-  localStorage.setItem("theme", value ? "dark" : "light");
-}
 </script>
 
 <style scoped>
@@ -89,25 +83,6 @@ function saveTheme(value: boolean) {
   --input-bg: #ffffff;
   --canvas-line: #94a3b8;
 }
-.app.dark {
-  --bg: #0b1120;
-  --text: #e2e8f0;
-  --panel-bg: #111827;
-  --panel-shadow: 0 8px 24px rgba(2, 6, 23, 0.6);
-  --border: #1f2937;
-  --muted: #9ca3af;
-  --muted-2: #6b7280;
-  --card-bg: #0f172a;
-  --grid: #111827;
-  --grid-line: #1f2937;
-  --accent: #60a5fa;
-  --accent-contrast: #0b1120;
-  --danger: #f87171;
-  --success: #34d399;
-  --warning: #fbbf24;
-  --input-bg: #0b1220;
-  --canvas-line: #64748b;
-}
 .header {
   margin-bottom: 24px;
 }
@@ -123,13 +98,23 @@ function saveTheme(value: boolean) {
 .header p {
   color: var(--muted);
 }
-.theme-toggle {
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.tabs button {
   border: 1px solid var(--border);
   background: var(--panel-bg);
   color: var(--text);
-  padding: 8px 12px;
+  padding: 6px 12px;
   border-radius: 10px;
   cursor: pointer;
+}
+.tabs button.active {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent);
 }
 .main {
   display: grid;

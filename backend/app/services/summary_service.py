@@ -13,7 +13,15 @@ from app.core.calculator import (
     resolve_effective_levels,
 )
 from app.core.scenarios import optimistic_value, pessimistic_value
-from app.models import Assignment, Module, Project, ProjectCoefficient, ProjectModule, Rate
+from app.models import (
+    Assignment,
+    Module,
+    Project,
+    ProjectCoefficient,
+    ProjectInfrastructure,
+    ProjectModule,
+    Rate,
+)
 from app.schemas import SummaryOut, SummaryScenario, SummaryTotals
 
 
@@ -32,8 +40,16 @@ def build_project_summary(session: Session, project_id: int) -> SummaryOut:
     assignments = _load_assignments(session, project_id)
     rates = _load_rates(session)
     coefficients = _load_project_coefficients(session, project_id)
+    infra_items = _load_project_infrastructure(session, project_id)
 
-    totals = _calculate_totals(project, project_modules, assignments, rates, coefficients)
+    totals = _calculate_totals(
+        project=project,
+        project_modules=project_modules,
+        assignments=assignments,
+        rates=rates,
+        infra_items=infra_items,
+        coefficients=coefficients,
+    )
     scenarios = _calculate_scenarios(totals)
 
     return SummaryOut(totals=totals, scenarios=scenarios)
@@ -50,6 +66,18 @@ def _load_project_modules(session: Session, project_id: int) -> list[ProjectModu
         select(ProjectModule)
         .where(ProjectModule.project_id == project_id)
         .join(ProjectModule.module)
+    )
+    return list(result.scalars())
+
+
+def _load_project_infrastructure(
+    session: Session,
+    project_id: int,
+) -> list[ProjectInfrastructure]:
+    result = session.execute(
+        select(ProjectInfrastructure)
+        .where(ProjectInfrastructure.project_id == project_id)
+        .join(ProjectInfrastructure.infrastructure_item)
     )
     return list(result.scalars())
 
@@ -78,9 +106,11 @@ def _calculate_totals(
     assignments: dict[tuple[int, str], str],
     rates: dict[tuple[str, str], float],
     coefficients: list[ProjectCoefficient],
+    infra_items: list[ProjectInfrastructure],
+    coefficients: list[ProjectCoefficient],
 ) -> SummaryTotals:
     totals = defaultdict(float)
-    cost_total = 0.0
+    work_cost_total = 0.0
     extra_multiplier = _combine_coefficients(coefficients)
 
     for project_module in project_modules:
@@ -118,20 +148,23 @@ def _calculate_totals(
         totals["backend"] += adjusted.backend
         totals["qa"] += adjusted.qa
 
-        cost_total += _calculate_module_cost(
+        work_cost_total += _calculate_module_cost(
             project_module_id=project_module.id,
             adjusted=adjusted,
             assignments=assignments,
             rates=rates,
         )
 
+    infra_cost = _calculate_infra_cost(infra_items)
     hours_total = totals["frontend"] + totals["backend"] + totals["qa"]
+    cost_total = work_cost_total + infra_cost
 
     return SummaryTotals(
         hours_frontend=totals["frontend"],
         hours_backend=totals["backend"],
         hours_qa=totals["qa"],
         hours_total=hours_total,
+        infra_cost=infra_cost,
         cost_total=cost_total,
     )
 
@@ -189,3 +222,9 @@ def _combine_coefficients(coefficients: list[ProjectCoefficient]) -> float:
     for coefficient in coefficients:
         multiplier *= max(coefficient.multiplier, 0)
     return multiplier
+def _calculate_infra_cost(infra_items: list[ProjectInfrastructure]) -> float:
+    cost = 0.0
+    for item in infra_items:
+        unit_cost = item.infrastructure_item.unit_cost if item.infrastructure_item else 0.0
+        cost += unit_cost * item.quantity
+    return cost
