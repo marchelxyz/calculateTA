@@ -47,6 +47,24 @@ class Module(Base):
         back_populates="module",
         cascade="all, delete-orphan",
     )
+    role_hours: Mapped[list["ModuleRoleHours"]] = relationship(
+        back_populates="module",
+        cascade="all, delete-orphan",
+    )
+
+
+class ModuleRoleHours(Base):
+    """Additional role hours for a module."""
+
+    __tablename__ = "module_role_hours"
+    __table_args__ = (UniqueConstraint("module_id", "role"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    module_id: Mapped[int] = mapped_column(ForeignKey("modules.id"))
+    role: Mapped[str] = mapped_column(String(64))
+    hours: Mapped[float] = mapped_column(Float, default=0)
+
+    module: Mapped[Module] = relationship(back_populates="role_hours")
 
 
 class Project(Base):
@@ -81,6 +99,22 @@ class Project(Base):
         back_populates="project",
         cascade="all, delete-orphan",
     )
+    mindmap_nodes: Mapped[list["ProjectNode"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    mindmap_connections: Mapped[list["ProjectNodeConnection"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    mindmap_notes: Mapped[list["ProjectNote"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    mindmap_versions: Mapped[list["ProjectMindmapVersion"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
 
 
 class ProjectModule(Base):
@@ -106,6 +140,90 @@ class ProjectModule(Base):
     module: Mapped[Module] = relationship(back_populates="project_modules")
 
 
+class ProjectNode(Base):
+    """Mindmap node inside a project."""
+
+    __tablename__ = "project_nodes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    module_id: Mapped[int | None] = mapped_column(ForeignKey("modules.id"), nullable=True)
+
+    title: Mapped[str] = mapped_column(String(128))
+    description: Mapped[str] = mapped_column(Text, default="")
+    is_ai: Mapped[bool] = mapped_column(default=False)
+
+    hours_frontend: Mapped[float] = mapped_column(Float, default=0)
+    hours_backend: Mapped[float] = mapped_column(Float, default=0)
+    hours_qa: Mapped[float] = mapped_column(Float, default=0)
+
+    uncertainty_level: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    uiux_level: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    legacy_code: Mapped[bool | None] = mapped_column(nullable=True)
+
+    position_x: Mapped[float] = mapped_column(Float, default=0)
+    position_y: Mapped[float] = mapped_column(Float, default=0)
+
+    project: Mapped[Project] = relationship(back_populates="mindmap_nodes")
+    module: Mapped[Module | None] = relationship()
+    role_hours: Mapped[list["ProjectNodeRoleHours"]] = relationship(
+        back_populates="node",
+        cascade="all, delete-orphan",
+    )
+
+
+class ProjectNodeRoleHours(Base):
+    """Extra role hours for mindmap node."""
+
+    __tablename__ = "project_node_role_hours"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    node_id: Mapped[int] = mapped_column(ForeignKey("project_nodes.id"))
+    role: Mapped[str] = mapped_column(String(64))
+    hours: Mapped[float] = mapped_column(Float, default=0)
+
+    node: Mapped[ProjectNode] = relationship(back_populates="role_hours")
+
+
+class ProjectNodeConnection(Base):
+    """Connection between mindmap nodes."""
+
+    __tablename__ = "project_node_connections"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    from_node_id: Mapped[int] = mapped_column(ForeignKey("project_nodes.id"))
+    to_node_id: Mapped[int] = mapped_column(ForeignKey("project_nodes.id"))
+
+    project: Mapped[Project] = relationship(back_populates="mindmap_connections")
+
+
+class ProjectNote(Base):
+    """Freeform note on mindmap canvas."""
+
+    __tablename__ = "project_notes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    content: Mapped[str] = mapped_column(Text, default="")
+    position_x: Mapped[float] = mapped_column(Float, default=0)
+    position_y: Mapped[float] = mapped_column(Float, default=0)
+
+    project: Mapped[Project] = relationship(back_populates="mindmap_notes")
+
+
+class ProjectMindmapVersion(Base):
+    """Stored mindmap snapshot version."""
+
+    __tablename__ = "project_mindmap_versions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    title: Mapped[str] = mapped_column(String(128))
+    payload: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    project: Mapped[Project] = relationship(back_populates="mindmap_versions")
 class ProjectConnection(Base):
     """Connection between project modules."""
 

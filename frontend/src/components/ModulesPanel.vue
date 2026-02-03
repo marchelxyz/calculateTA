@@ -1,32 +1,24 @@
 <template>
   <section class="panel">
-    <h2>Палитра модулей</h2>
-    <p class="hint">Перетаскивайте кубики на холст или добавляйте по клику.</p>
-    <input
-      v-model="search"
-      class="search"
-      placeholder="Поиск по модулям"
-      type="search"
-    />
-    <Draggable
-      class="list"
-      :list="filteredModules"
-      :group="{ name: 'modules', pull: 'clone', put: false }"
-      :clone="cloneModule"
-      item-key="id"
-    >
-      <template #item="{ element }">
-        <div class="card" @click="store.addModule(element.id)">
-          <strong>{{ element.name }}</strong>
-          <span>{{ element.description }}</span>
+    <h2>Каталог модулей</h2>
+    <p class="hint">
+      Модули общие для всех проектов — добавляйте и обновляйте их здесь.
+    </p>
+    <input v-model="search" class="search" placeholder="Поиск по модулям" type="search" />
+    <div class="list">
+      <div v-for="module in filteredModules" :key="module.id" class="card">
+        <div class="card-body">
+          <strong>{{ module.name }}</strong>
+          <span>{{ module.description }}</span>
         </div>
-      </template>
-    </Draggable>
+        <button class="danger" @click="removeModule(module.id)">Удалить</button>
+      </div>
+      <div v-if="!filteredModules.length" class="empty">Модули не найдены.</div>
+    </div>
     <div class="creator">
       <h3>Новый модуль</h3>
       <p class="creator-hint">
-        Часы — это базовая оценка трудозатрат по ролям (FE/BE/QA).
-        Эти значения участвуют в расчете стоимости и сроков.
+        Часы — это базовая оценка трудозатрат по ролям и основа сметы.
       </p>
       <div class="creator-grid">
         <label>
@@ -65,9 +57,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { VueDraggableNext as Draggable } from "vue-draggable-next";
 import { useProjectStore } from "../stores/project";
-import type { Module } from "../types";
 
 const store = useProjectStore();
 const search = ref("");
@@ -100,10 +90,6 @@ const extraRoles = computed(() => {
   return Array.from(roles).filter((role) => !base.has(role.toLowerCase()));
 });
 
-function cloneModule(module: Module) {
-  return module;
-}
-
 async function createModule() {
   if (!draft.value.name.trim()) return;
   const code = draft.value.code.trim() || slugify(draft.value.name);
@@ -132,6 +118,15 @@ async function createModule() {
   extraRoleHours.value = {};
 }
 
+async function removeModule(moduleId: number) {
+  try {
+    await store.deleteModule(moduleId);
+  } catch (error) {
+    console.error(error);
+    alert("Нельзя удалить модуль, который используется в проектах.");
+  }
+}
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -153,11 +148,6 @@ function slugify(value: string) {
   color: var(--muted);
   font-size: 14px;
 }
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
 .search {
   width: 100%;
   padding: 8px 10px;
@@ -167,12 +157,22 @@ function slugify(value: string) {
   color: var(--text);
   margin: 8px 0 12px;
 }
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 .card {
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  cursor: pointer;
   background: var(--card-bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.card-body {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -182,6 +182,18 @@ function slugify(value: string) {
 }
 .card span {
   font-size: 12px;
+  color: var(--muted);
+}
+.danger {
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.empty {
+  font-size: 13px;
   color: var(--muted);
 }
 .creator {

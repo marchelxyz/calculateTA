@@ -1,5 +1,5 @@
 <template>
-  <div class="app">
+  <div class="app" :class="{ dark: isDark }">
     <AuthGate v-if="!ready || !store.currentUser" @authenticated="onAuthenticated" />
     <template v-else>
       <header class="header">
@@ -15,6 +15,9 @@
               </option>
             </select>
             <button class="ghost" @click="saveAndClear">Сохранить и очистить</button>
+            <button class="ghost" @click="toggleTheme">
+              {{ isDark ? "Светлая тема" : "Темная тема" }}
+            </button>
             <button class="ghost" @click="logout">Выйти</button>
           </div>
         </div>
@@ -28,6 +31,12 @@
         </button>
         <button :class="{ active: activeTab === 'infra' }" @click="activeTab = 'infra'">
           Инфраструктура
+        </button>
+        <button :class="{ active: activeTab === 'modules' }" @click="activeTab = 'modules'">
+          Модули
+        </button>
+        <button :class="{ active: activeTab === 'team' }" @click="activeTab = 'team'">
+          Команда
         </button>
         <button
           v-if="isAdmin"
@@ -46,13 +55,14 @@
         <section class="right">
           <div class="controls">
             <SlidersPanel />
-            <RatesPanel />
           </div>
           <ProjectCanvas />
           <SummaryPanel />
         </section>
       </div>
       <InfrastructurePanel v-else-if="activeTab === 'infra'" />
+      <ModulesPanel v-else-if="activeTab === 'modules'" />
+      <RatesPanel v-else-if="activeTab === 'team'" />
       <AdminPanel v-else />
     </template>
   </div>
@@ -71,18 +81,21 @@ import SummaryPanel from "./components/SummaryPanel.vue";
 import AiAssistant from "./components/AiAssistant.vue";
 import InfrastructurePanel from "./components/InfrastructurePanel.vue";
 import MainDashboard from "./components/MainDashboard.vue";
+import ModulesPanel from "./components/ModulesPanel.vue";
 
 const store = useProjectStore();
-const activeTab = ref<"main" | "work" | "infra" | "admin">("main");
+const activeTab = ref<"main" | "work" | "infra" | "modules" | "team" | "admin">("main");
 const ready = ref(false);
 const selectedProjectId = ref<number | null>(null);
 const isAdmin = computed(() => store.currentUser?.role === "admin");
+const isDark = ref(false);
 
 onMounted(() => {
   init();
 });
 
 async function init() {
+  isDark.value = localStorage.getItem("theme") === "dark";
   const username = localStorage.getItem("auth_username");
   const password = localStorage.getItem("auth_password");
   if (username && password) {
@@ -124,6 +137,11 @@ async function logout() {
   ready.value = false;
   await init();
 }
+
+function toggleTheme() {
+  isDark.value = !isDark.value;
+  localStorage.setItem("theme", isDark.value ? "dark" : "light");
+}
 </script>
 
 <style scoped>
@@ -150,6 +168,51 @@ async function logout() {
   --warning: #f59e0b;
   --input-bg: #ffffff;
   --canvas-line: #94a3b8;
+  --note-bg: #fde68a;
+  --note-border: #f59e0b;
+  --note-text: #111827;
+  --note-action: #b45309;
+  --chip-added-bg: #dcfce7;
+  --chip-added-border: #22c55e;
+  --chip-added-text: #15803d;
+  --chip-changed-bg: #fef9c3;
+  --chip-changed-border: #eab308;
+  --chip-changed-text: #854d0e;
+  --chip-removed-bg: #fee2e2;
+  --chip-removed-border: #ef4444;
+  --chip-removed-text: #991b1b;
+}
+.app.dark {
+  --bg: #0b1120;
+  --text: #e2e8f0;
+  --panel-bg: #0f172a;
+  --panel-shadow: 0 8px 24px rgba(15, 23, 42, 0.35);
+  --border: #1e293b;
+  --muted: #94a3b8;
+  --muted-2: #64748b;
+  --card-bg: #111827;
+  --grid: #111827;
+  --grid-line: #1e293b;
+  --accent: #38bdf8;
+  --accent-contrast: #0b1120;
+  --danger: #f87171;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --input-bg: #0b1220;
+  --canvas-line: #94a3b8;
+  --note-bg: #3f2f00;
+  --note-border: #a16207;
+  --note-text: #fde68a;
+  --note-action: #fbbf24;
+  --chip-added-bg: #064e3b;
+  --chip-added-border: #22c55e;
+  --chip-added-text: #a7f3d0;
+  --chip-changed-bg: #3f2f00;
+  --chip-changed-border: #eab308;
+  --chip-changed-text: #fef08a;
+  --chip-removed-bg: #450a0a;
+  --chip-removed-border: #ef4444;
+  --chip-removed-text: #fecaca;
 }
 .header {
   margin-bottom: 24px;
@@ -164,6 +227,7 @@ async function logout() {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 .header-actions select {
   padding: 6px 8px;

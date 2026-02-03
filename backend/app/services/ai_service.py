@@ -10,7 +10,14 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models import Module
-from app.schemas import AiModuleSuggestion, AiParseResponse, AiWbsTask
+from app.schemas import (
+    AiMindmapConnection,
+    AiMindmapNode,
+    AiMindmapResponse,
+    AiModuleSuggestion,
+    AiParseResponse,
+    AiWbsTask,
+)
 
 
 @dataclass(frozen=True)
@@ -20,6 +27,19 @@ class ModuleCatalogItem:
     code: str
     name: str
     description: str
+
+
+@dataclass(frozen=True)
+class ModuleCatalogHours:
+    """Catalog item with hour defaults."""
+
+    code: str
+    name: str
+    description: str
+    hours_frontend: float
+    hours_backend: float
+    hours_qa: float
+    role_hours: list[dict[str, float]]
 
 
 logger = logging.getLogger(__name__)
@@ -35,6 +55,15 @@ def parse_prompt_with_ai(session: Session, prompt: str) -> AiParseResponse:
     return _parse_with_heuristics(prompt, catalog, catalog_index)
 
 
+def parse_prompt_to_mindmap(session: Session, prompt: str) -> AiMindmapResponse:
+    """Build mindmap nodes and connections from prompt."""
+
+    response = parse_prompt_with_ai(session, prompt)
+    catalog = _load_catalog_with_hours(session)
+    catalog_by_code = {item.code: item for item in catalog}
+    return _build_mindmap_from_tasks(response.tasks, catalog_by_code, response.rationale)
+
+
 def _load_catalog(session: Session) -> list[ModuleCatalogItem]:
     """Load module catalog from database."""
     result = session.execute(select(Module))
@@ -45,6 +74,29 @@ def _load_catalog(session: Session) -> list[ModuleCatalogItem]:
                 code=module.code,
                 name=module.name,
                 description=module.description or "",
+            )
+        )
+    return items
+
+
+def _load_catalog_with_hours(session: Session) -> list[ModuleCatalogHours]:
+    """Load module catalog with hours and role hours."""
+
+    result = session.execute(select(Module))
+    items: list[ModuleCatalogHours] = []
+    for module in result.scalars():
+        items.append(
+            ModuleCatalogHours(
+                code=module.code,
+                name=module.name,
+                description=module.description or "",
+                hours_frontend=module.hours_frontend,
+                hours_backend=module.hours_backend,
+                hours_qa=module.hours_qa,
+                role_hours=[
+                    {"role": item.role, "hours": item.hours}
+                    for item in module.role_hours
+                ],
             )
         )
     return items
@@ -290,3 +342,92 @@ def _fallback_tasks(catalog_index: dict[str, set[str]]) -> list[AiWbsTask]:
         ),
     ]
     return tasks
+
+
+def _build_mindmap_from_tasks(
+    tasks: list[AiWbsTask],
+    catalog_by_code: dict[str, ModuleCatalogHours],
+    rationale: str,
+) -> AiMindmapResponse:
+    """Convert WBS tasks into mindmap graph."""
+
+    root_key = "root"
+    nodes: list[AiMindmapNode] = [
+        AiMindmapNode(
+            key=root_key,
+            title="Проект",
+            details="AI-схема по запросу",
+            module_code="",
+        )
+    ]
+    connections: list[AiMindmapConnection] = []
+
+    grouped: dict[str, list[AiWbsTask]] = {}
+    for task in tasks:
+        grouped.setdefault(task.module_code or "core", []).append(task)
+
+    for module_code, grouped_tasks in grouped.items():
+        module = catalog_by_code.get(module_code)
+        module_key = f"module_{module_code}"
+        nodes.append(
+            AiMindmapNode(
+                key=module_key,
+                title=module.name if module else module_code,
+                details=module.description if module else "",
+                module_code=module_code,
+            )
+        )
+        connections.append(
+            AiMindmapConnection(from_key=root_key, to_key=module_key)
+        )
+
+        split_hours = _split_hours(module, len(grouped_tasks))
+        split_role_hours = _split_role_hours(module, len(grouped_tasks))
+        for index, task in enumerate(grouped_tasks):
+            node_key = f"task_{module_code}_{index}"
+            nodes.append(
+                AiMindmapNode(
+                    key=node_key,
+                    title=task.title,
+                    details=task.details,
+                    module_code=module_code,
+                    hours_frontend=split_hours["frontend"],
+                    hours_backend=split_hours["backend"],
+                    hours_qa=split_hours["qa"],
+                    role_hours=split_role_hours,
+                )
+            )
+            connections.append(
+                AiMindmapConnection(from_key=module_key, to_key=node_key)
+            )
+
+    return AiMindmapResponse(nodes=nodes, connections=connections, rationale=rationale)
+
+
+def _split_hours(
+    module: ModuleCatalogHours | None,
+    count: int,
+) -> dict[str, float]:
+    """Split module base hours across tasks."""
+
+    if not module or count <= 0:
+        return {"frontend": 0.0, "backend": 0.0, "qa": 0.0}
+    return {
+        "frontend": module.hours_frontend / count,
+        "backend": module.hours_backend / count,
+        "qa": module.hours_qa / count,
+    }
+
+
+def _split_role_hours(
+    module: ModuleCatalogHours | None,
+    count: int,
+) -> list[dict[str, float]]:
+    """Split extra role hours across tasks."""
+
+    if not module or count <= 0:
+        return []
+    return [
+        {"role": item["role"], "hours": item["hours"] / count}
+        for item in module.role_hours
+    ]

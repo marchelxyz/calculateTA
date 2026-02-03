@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.calculator import (
     ModuleHours,
@@ -12,6 +12,7 @@ from app.core.calculator import (
     merge_module_overrides,
     resolve_effective_levels,
 )
+from app.core.config import settings
 from app.core.scenarios import optimistic_value, pessimistic_value
 from app.models import (
     Assignment,
@@ -20,6 +21,7 @@ from app.models import (
     ProjectCoefficient,
     ProjectInfrastructure,
     ProjectModule,
+    ProjectNode,
     Rate,
 )
 from app.schemas import SummaryOut, SummaryScenario, SummaryTotals
@@ -37,6 +39,7 @@ def build_project_summary(session: Session, project_id: int) -> SummaryOut:
 
     project = _get_project(session, project_id)
     project_modules = _load_project_modules(session, project_id)
+    project_nodes = _load_project_nodes(session, project_id)
     assignments = _load_assignments(session, project_id)
     rates = _load_rates(session)
     coefficients = _load_project_coefficients(session, project_id)
@@ -45,6 +48,7 @@ def build_project_summary(session: Session, project_id: int) -> SummaryOut:
     totals = _calculate_totals(
         project=project,
         project_modules=project_modules,
+        project_nodes=project_nodes,
         assignments=assignments,
         rates=rates,
         infra_items=infra_items,
@@ -65,7 +69,17 @@ def _load_project_modules(session: Session, project_id: int) -> list[ProjectModu
     result = session.execute(
         select(ProjectModule)
         .where(ProjectModule.project_id == project_id)
+        .options(joinedload(ProjectModule.module).joinedload(Module.role_hours))
         .join(ProjectModule.module)
+    )
+    return list(result.scalars())
+
+
+def _load_project_nodes(session: Session, project_id: int) -> list[ProjectNode]:
+    result = session.execute(
+        select(ProjectNode)
+        .where(ProjectNode.project_id == project_id)
+        .options(joinedload(ProjectNode.role_hours))
     )
     return list(result.scalars())
 
@@ -103,6 +117,7 @@ def _load_rates(session: Session) -> dict[tuple[str, str], float]:
 def _calculate_totals(
     project: Project,
     project_modules: list[ProjectModule],
+    project_nodes: list[ProjectNode],
     assignments: dict[tuple[int, str], str],
     rates: dict[tuple[str, str], float],
     infra_items: list[ProjectInfrastructure],
@@ -111,6 +126,7 @@ def _calculate_totals(
     totals = defaultdict(float)
     work_cost_total = 0.0
     extra_multiplier = _combine_coefficients(coefficients)
+    extra_roles_total = 0.0
 
     for project_module in project_modules:
         base_hours = ModuleHours(
@@ -143,6 +159,8 @@ def _calculate_totals(
         )
         adjusted = apply_extra_multiplier(adjusted, extra_multiplier)
 
+        extra_role_multiplier = _extra_role_multiplier(uncertainty_level, legacy_code)
+
         totals["frontend"] += adjusted.frontend
         totals["backend"] += adjusted.backend
         totals["qa"] += adjusted.qa
@@ -152,10 +170,33 @@ def _calculate_totals(
             adjusted=adjusted,
             assignments=assignments,
             rates=rates,
+            role_hours=project_module.module.role_hours,
+            extra_multiplier=extra_role_multiplier * extra_multiplier,
+        )
+        extra_roles_total += _calculate_extra_hours(
+            project_module.module.role_hours,
+            extra_role_multiplier * extra_multiplier,
+        )
+
+    for node in project_nodes:
+        adjusted = _calculate_node_hours(project, node, extra_multiplier)
+        node_extra_multiplier = _node_extra_multiplier(project, node, extra_multiplier)
+        totals["frontend"] += adjusted.frontend
+        totals["backend"] += adjusted.backend
+        totals["qa"] += adjusted.qa
+        work_cost_total += _calculate_node_cost(
+            adjusted=adjusted,
+            rates=rates,
+            role_hours=node.role_hours,
+            extra_multiplier=node_extra_multiplier,
+        )
+        extra_roles_total += _calculate_extra_hours(
+            node.role_hours,
+            node_extra_multiplier,
         )
 
     infra_cost = _calculate_infra_cost(infra_items)
-    hours_total = totals["frontend"] + totals["backend"] + totals["qa"]
+    hours_total = totals["frontend"] + totals["backend"] + totals["qa"] + extra_roles_total
     cost_total = work_cost_total + infra_cost
 
     return SummaryTotals(
@@ -173,17 +214,47 @@ def _calculate_module_cost(
     adjusted: ModuleHours,
     assignments: dict[tuple[int, str], str],
     rates: dict[tuple[str, str], float],
+    role_hours: list,
+    extra_multiplier: float,
 ) -> float:
     cost = 0.0
-    role_hours = {
+    base_role_hours = {
         "frontend": adjusted.frontend,
         "backend": adjusted.backend,
         "qa": adjusted.qa,
     }
-    for role, hours in role_hours.items():
+    for role, hours in base_role_hours.items():
         level = assignments.get((project_module_id, role), ROLE_DEFAULT_LEVEL.get(role, "middle"))
         rate = rates.get((role, level), 0.0)
         cost += hours * rate
+    for item in role_hours:
+        level = assignments.get((project_module_id, item.role), "middle")
+        rate = rates.get((item.role, level), 0.0)
+        cost += item.hours * extra_multiplier * rate
+    return cost
+
+
+def _calculate_node_cost(
+    adjusted: ModuleHours,
+    rates: dict[tuple[str, str], float],
+    role_hours: list,
+    extra_multiplier: float,
+) -> float:
+    """Calculate cost for a mindmap node."""
+    cost = 0.0
+    base_role_hours = {
+        "frontend": adjusted.frontend,
+        "backend": adjusted.backend,
+        "qa": adjusted.qa,
+    }
+    for role, hours in base_role_hours.items():
+        level = ROLE_DEFAULT_LEVEL.get(role, "middle")
+        rate = rates.get((role, level), 0.0)
+        cost += hours * rate
+    for item in role_hours:
+        level = "middle"
+        rate = rates.get((item.role, level), 0.0)
+        cost += item.hours * extra_multiplier * rate
     return cost
 
 
@@ -221,6 +292,67 @@ def _combine_coefficients(coefficients: list[ProjectCoefficient]) -> float:
     for coefficient in coefficients:
         multiplier *= max(coefficient.multiplier, 0)
     return multiplier
+
+
+def _extra_role_multiplier(uncertainty_level: str, legacy_code: bool) -> float:
+    """Return multiplier for extra roles (no UI/UX)."""
+
+    uncertainty = settings.uncertainty_coefficients.get(uncertainty_level, 1.0)
+    legacy = settings.legacy_multiplier if legacy_code else 1.0
+    return uncertainty * legacy
+
+
+def _node_extra_multiplier(
+    project: Project,
+    node: ProjectNode,
+    extra_multiplier: float,
+) -> float:
+    """Return combined multiplier for node extra roles."""
+    uncertainty_level = resolve_effective_levels(
+        project.uncertainty_level,
+        node.uncertainty_level,
+    )
+    legacy_code = node.legacy_code if node.legacy_code is not None else project.legacy_code
+    return _extra_role_multiplier(uncertainty_level, legacy_code) * extra_multiplier
+
+
+def _calculate_node_hours(
+    project: Project,
+    node: ProjectNode,
+    extra_multiplier: float,
+) -> ModuleHours:
+    """Return adjusted node hours with multipliers."""
+    base_hours = ModuleHours(
+        frontend=node.hours_frontend,
+        backend=node.hours_backend,
+        qa=node.hours_qa,
+    )
+    uncertainty_level = resolve_effective_levels(
+        project.uncertainty_level,
+        node.uncertainty_level,
+    )
+    uiux_level = resolve_effective_levels(
+        project.uiux_level,
+        node.uiux_level,
+    )
+    legacy_code = node.legacy_code if node.legacy_code is not None else project.legacy_code
+    adjusted = apply_project_coefficients(
+        hours=base_hours,
+        uncertainty_level=uncertainty_level,
+        uiux_level=uiux_level,
+        legacy_code=legacy_code,
+    )
+    return apply_extra_multiplier(adjusted, extra_multiplier)
+
+
+def _calculate_extra_hours(
+    role_hours: list,
+    multiplier: float,
+) -> float:
+    total = 0.0
+    for item in role_hours:
+        total += item.hours * multiplier
+    return total
 
 
 def _calculate_infra_cost(infra_items: list[ProjectInfrastructure]) -> float:
