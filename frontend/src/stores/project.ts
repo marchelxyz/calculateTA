@@ -9,6 +9,7 @@ import type {
   Rate,
   RateDraft,
   Summary,
+  ProjectCoefficient,
   InfrastructureItem,
   ProjectInfrastructure,
 } from "../types";
@@ -21,6 +22,7 @@ type State = {
   rates: Rate[];
   summary: Summary | null;
   aiResult: AiParseResponse | null;
+  coefficients: ProjectCoefficient[];
   infrastructureCatalog: InfrastructureItem[];
   projectInfrastructure: ProjectInfrastructure[];
   loading: boolean;
@@ -35,6 +37,7 @@ export const useProjectStore = defineStore("project", {
     rates: [],
     summary: null,
     aiResult: null,
+    coefficients: [],
     infrastructureCatalog: [],
     projectInfrastructure: [],
     loading: false,
@@ -50,6 +53,7 @@ export const useProjectStore = defineStore("project", {
         }
         await this.loadProjectModules();
         await this.loadAssignments();
+        await this.loadCoefficients();
         await this.loadInfrastructureCatalog();
         await this.loadProjectInfrastructure();
         await this.loadSummary();
@@ -160,6 +164,26 @@ export const useProjectStore = defineStore("project", {
         `/projects/${this.project.id}/summary`
       );
       this.summary = response.data;
+    },
+    async loadCoefficients() {
+      if (!this.project) return;
+      const response = await client.get<ProjectCoefficient[]>(
+        `/projects/${this.project.id}/coefficients`
+      );
+      this.coefficients = response.data;
+    },
+    async updateCoefficients(payload: ProjectCoefficient[]) {
+      if (!this.project) return;
+      const data = payload.map((item) => ({
+        name: item.name,
+        multiplier: item.multiplier,
+      }));
+      const response = await client.put<ProjectCoefficient[]>(
+        `/projects/${this.project.id}/coefficients`,
+        data
+      );
+      this.coefficients = response.data;
+      await this.loadSummary();
     },
     async loadInfrastructureCatalog() {
       const response = await client.get<InfrastructureItem[]>("/infrastructure");

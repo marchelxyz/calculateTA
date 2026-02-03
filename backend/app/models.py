@@ -77,6 +77,10 @@ class Project(Base):
         back_populates="project",
         cascade="all, delete-orphan",
     )
+    coefficients: Mapped[list["ProjectCoefficient"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
 
 
 class ProjectModule(Base):
@@ -130,6 +134,18 @@ class Assignment(Base):
     project_module: Mapped[ProjectModule] = relationship()
 
 
+class ProjectCoefficient(Base):
+    """Project-level complexity coefficient."""
+
+    __tablename__ = "project_coefficients"
+    __table_args__ = (UniqueConstraint("project_id", "name"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    name: Mapped[str] = mapped_column(String(64))
+    multiplier: Mapped[float] = mapped_column(Float, default=1.0)
+
+    project: Mapped[Project] = relationship(back_populates="coefficients")
 class InfrastructureItem(Base):
     """Infrastructure catalog item."""
 

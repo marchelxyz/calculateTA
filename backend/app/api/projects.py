@@ -5,11 +5,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db_session
-from app.models import Assignment, Module, Project, ProjectModule
+from app.models import Assignment, Module, Project, ProjectCoefficient, ProjectModule
 from app.schemas import (
     AssignmentOut,
     AssignmentUpsert,
     ProjectCreate,
+    ProjectCoefficientCreate,
+    ProjectCoefficientOut,
     ProjectModuleCreate,
     ProjectModuleOut,
     ProjectModuleUpdate,
@@ -36,6 +38,7 @@ def create_project(
     session.add(project)
     session.commit()
     session.refresh(project)
+    _seed_project_coefficients(session, project.id)
     return ProjectOut(**project.__dict__)
 
 
@@ -186,6 +189,55 @@ def get_summary(
     return build_project_summary(session, project_id)
 
 
+@router.get("/{project_id}/coefficients", response_model=list[ProjectCoefficientOut])
+def list_coefficients(
+    project_id: int,
+    session: Session = Depends(get_db_session),
+) -> list[ProjectCoefficientOut]:
+    """List project coefficients."""
+
+    _get_project(session, project_id)
+    result = session.execute(
+        select(ProjectCoefficient).where(ProjectCoefficient.project_id == project_id)
+    )
+    items = list(result.scalars())
+    if not items:
+        _seed_project_coefficients(session, project_id)
+        result = session.execute(
+            select(ProjectCoefficient).where(ProjectCoefficient.project_id == project_id)
+        )
+        items = list(result.scalars())
+    return [ProjectCoefficientOut(**item.__dict__) for item in items]
+
+
+@router.put("/{project_id}/coefficients", response_model=list[ProjectCoefficientOut])
+def upsert_coefficients(
+    project_id: int,
+    payload: list[ProjectCoefficientCreate],
+    session: Session = Depends(get_db_session),
+) -> list[ProjectCoefficientOut]:
+    """Upsert project coefficients."""
+
+    _get_project(session, project_id)
+    results: list[ProjectCoefficientOut] = []
+    for item in payload:
+        existing = _get_project_coefficient(session, project_id, item.name)
+        if existing:
+            existing.multiplier = item.multiplier
+            record = existing
+        else:
+            record = ProjectCoefficient(
+                project_id=project_id,
+                name=item.name,
+                multiplier=item.multiplier,
+            )
+            session.add(record)
+        session.flush()
+        results.append(ProjectCoefficientOut(**record.__dict__))
+    session.commit()
+    return results
+
+
 def _get_project(session: Session, project_id: int) -> Project:
     result = session.execute(select(Project).where(Project.id == project_id))
     project = result.scalar_one_or_none()
@@ -263,3 +315,26 @@ def _apply_project_module_updates(
         project_module.uiux_level = payload.uiux_level
     if payload.legacy_code is not None:
         project_module.legacy_code = payload.legacy_code
+
+
+def _get_project_coefficient(
+    session: Session,
+    project_id: int,
+    name: str,
+) -> ProjectCoefficient | None:
+    result = session.execute(
+        select(ProjectCoefficient)
+        .where(ProjectCoefficient.project_id == project_id)
+        .where(ProjectCoefficient.name == name)
+    )
+    return result.scalar_one_or_none()
+
+
+def _seed_project_coefficients(session: Session, project_id: int) -> None:
+    defaults = [
+        ProjectCoefficient(project_id=project_id, name="Неопределенность", multiplier=1.0),
+        ProjectCoefficient(project_id=project_id, name="UI/UX", multiplier=1.0),
+        ProjectCoefficient(project_id=project_id, name="Legacy code", multiplier=1.0),
+    ]
+    session.add_all(defaults)
+    session.commit()

@@ -5,9 +5,23 @@ from collections import defaultdict
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.calculator import ModuleHours, apply_project_coefficients, merge_module_overrides, resolve_effective_levels
+from app.core.calculator import (
+    ModuleHours,
+    apply_extra_multiplier,
+    apply_project_coefficients,
+    merge_module_overrides,
+    resolve_effective_levels,
+)
 from app.core.scenarios import optimistic_value, pessimistic_value
-from app.models import Assignment, Module, Project, ProjectInfrastructure, ProjectModule, Rate
+from app.models import (
+    Assignment,
+    Module,
+    Project,
+    ProjectCoefficient,
+    ProjectInfrastructure,
+    ProjectModule,
+    Rate,
+)
 from app.schemas import SummaryOut, SummaryScenario, SummaryTotals
 
 
@@ -25,6 +39,7 @@ def build_project_summary(session: Session, project_id: int) -> SummaryOut:
     project_modules = _load_project_modules(session, project_id)
     assignments = _load_assignments(session, project_id)
     rates = _load_rates(session)
+    coefficients = _load_project_coefficients(session, project_id)
     infra_items = _load_project_infrastructure(session, project_id)
 
     totals = _calculate_totals(
@@ -33,6 +48,7 @@ def build_project_summary(session: Session, project_id: int) -> SummaryOut:
         assignments=assignments,
         rates=rates,
         infra_items=infra_items,
+        coefficients=coefficients,
     )
     scenarios = _calculate_scenarios(totals)
 
@@ -89,10 +105,13 @@ def _calculate_totals(
     project_modules: list[ProjectModule],
     assignments: dict[tuple[int, str], str],
     rates: dict[tuple[str, str], float],
+    coefficients: list[ProjectCoefficient],
     infra_items: list[ProjectInfrastructure],
+    coefficients: list[ProjectCoefficient],
 ) -> SummaryTotals:
     totals = defaultdict(float)
     work_cost_total = 0.0
+    extra_multiplier = _combine_coefficients(coefficients)
 
     for project_module in project_modules:
         base_hours = ModuleHours(
@@ -123,6 +142,7 @@ def _calculate_totals(
             uiux_level=uiux_level,
             legacy_code=legacy_code,
         )
+        adjusted = apply_extra_multiplier(adjusted, extra_multiplier)
 
         totals["frontend"] += adjusted.frontend
         totals["backend"] += adjusted.backend
@@ -187,6 +207,21 @@ def _calculate_scenarios(totals: SummaryTotals) -> list[SummaryScenario]:
     return [optimistic, realistic, pessimistic]
 
 
+def _load_project_coefficients(
+    session: Session,
+    project_id: int,
+) -> list[ProjectCoefficient]:
+    result = session.execute(
+        select(ProjectCoefficient).where(ProjectCoefficient.project_id == project_id)
+    )
+    return list(result.scalars())
+
+
+def _combine_coefficients(coefficients: list[ProjectCoefficient]) -> float:
+    multiplier = 1.0
+    for coefficient in coefficients:
+        multiplier *= max(coefficient.multiplier, 0)
+    return multiplier
 def _calculate_infra_cost(infra_items: list[ProjectInfrastructure]) -> float:
     cost = 0.0
     for item in infra_items:
