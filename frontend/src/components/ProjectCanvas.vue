@@ -1,6 +1,18 @@
 <template>
   <section class="panel">
-    <h2>Холст проекта</h2>
+    <div class="panel-header">
+      <div>
+        <h2>Холст проекта</h2>
+        <p v-if="linkMode.active" class="hint">
+          Выберите целевой блок для связи с
+          <strong>{{ moduleName(linkMode.fromId ?? 0) }}</strong>
+          <button class="link-cancel" @click="cancelLinkMode">Отмена</button>
+        </p>
+      </div>
+      <button class="ghost" @click="clearConnections" :disabled="connections.length === 0">
+        Очистить связи
+      </button>
+    </div>
     <div class="canvas-surface" ref="canvasRef" @click="hideContextMenu">
       <svg v-if="lines.length" class="canvas-lines">
         <path
@@ -24,12 +36,16 @@
             class="module-card"
             :ref="(el) => setNodeRef(el, element.id)"
             @contextmenu="openContextMenu($event, element.id)"
+            @click.stop="handleNodeClick(element.id)"
           >
             <header class="module-header">
               <div>
                 <strong>{{ moduleName(element.module_id) }}</strong>
                 <small v-if="element.custom_name">{{ element.custom_name }}</small>
               </div>
+              <span v-if="linkMode.fromId === element.id" class="link-badge">
+                Источник связи
+              </span>
               <button class="ghost" @click="store.removeProjectModule(element.id)">
                 Удалить
               </button>
@@ -141,6 +157,8 @@
         :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }"
         @click.stop
       >
+        <button class="ghost" @click="startLinkMode">Связать с...</button>
+        <button class="ghost" @click="removeConnections">Удалить связи</button>
         <button class="ghost" @click="resetModule">Сбросить настройки</button>
         <button class="danger" @click="removeModule">Удалить модуль</button>
       </div>
@@ -158,6 +176,11 @@ const store = useProjectStore();
 const canvasRef = ref<HTMLElement | null>(null);
 const lines = ref<{ x1: number; y1: number; x2: number; y2: number }[]>([]);
 const nodeRefs = ref<Record<number, HTMLElement>>({});
+const connections = ref<{ fromId: number; toId: number }[]>([]);
+const linkMode = ref<{ active: boolean; fromId: number | null }>({
+  active: false,
+  fromId: null,
+});
 const contextMenu = ref({
   visible: false,
   x: 0,
@@ -270,27 +293,29 @@ function scheduleLineUpdate() {
 function updateLines() {
   if (!canvasRef.value) return;
   const rect = canvasRef.value.getBoundingClientRect();
-  const points = store.projectModules
-    .map((module) => {
-      const element = nodeRefs.value[module.id];
-      if (!element) return null;
-      const box = element.getBoundingClientRect();
-      return {
-        x: box.left - rect.left + box.width / 2,
-        y: box.top - rect.top + box.height / 2,
-      };
-    })
-    .filter((point): point is { x: number; y: number } => Boolean(point));
+  const positions: Record<number, { x: number; y: number }> = {};
+  store.projectModules.forEach((module) => {
+    const element = nodeRefs.value[module.id];
+    if (!element) return;
+    const box = element.getBoundingClientRect();
+    positions[module.id] = {
+      x: box.left - rect.left + box.width / 2,
+      y: box.top - rect.top + box.height / 2,
+    };
+  });
 
-  const nextLines = [];
-  for (let i = 0; i < points.length - 1; i += 1) {
-    nextLines.push({
-      x1: points[i].x,
-      y1: points[i].y,
-      x2: points[i + 1].x,
-      y2: points[i + 1].y,
-    });
-  }
+  const nextLines = connections.value
+    .map((connection) => {
+      const from = positions[connection.fromId];
+      const to = positions[connection.toId];
+      if (!from || !to) return null;
+      return { x1: from.x, y1: from.y, x2: to.x, y2: to.y };
+    })
+    .filter(
+      (line): line is { x1: number; y1: number; x2: number; y2: number } =>
+        Boolean(line)
+    );
+
   lines.value = nextLines;
 }
 
@@ -318,6 +343,50 @@ function hideContextMenu() {
   contextMenu.value.visible = false;
 }
 
+function startLinkMode() {
+  const moduleId = contextMenu.value.moduleId;
+  if (!moduleId) return;
+  linkMode.value = { active: true, fromId: moduleId };
+  hideContextMenu();
+}
+
+function cancelLinkMode() {
+  linkMode.value = { active: false, fromId: null };
+}
+
+function handleNodeClick(moduleId: number) {
+  if (!linkMode.value.active || !linkMode.value.fromId) return;
+  if (linkMode.value.fromId === moduleId) return;
+  const exists = connections.value.some(
+    (connection) =>
+      connection.fromId === linkMode.value.fromId &&
+      connection.toId === moduleId
+  );
+  if (!exists) {
+    connections.value = [
+      ...connections.value,
+      { fromId: linkMode.value.fromId, toId: moduleId },
+    ];
+    scheduleLineUpdate();
+  }
+  cancelLinkMode();
+}
+
+function removeConnections() {
+  const moduleId = contextMenu.value.moduleId;
+  if (!moduleId) return;
+  connections.value = connections.value.filter(
+    (connection) => connection.fromId !== moduleId && connection.toId !== moduleId
+  );
+  scheduleLineUpdate();
+  hideContextMenu();
+}
+
+function clearConnections() {
+  connections.value = [];
+  scheduleLineUpdate();
+}
+
 function resetModule() {
   const moduleId = contextMenu.value.moduleId;
   if (!moduleId) return;
@@ -340,6 +409,10 @@ function removeModule() {
   const moduleId = contextMenu.value.moduleId;
   if (!moduleId) return;
   store.removeProjectModule(moduleId);
+  connections.value = connections.value.filter(
+    (connection) => connection.fromId !== moduleId && connection.toId !== moduleId
+  );
+  scheduleLineUpdate();
   hideContextMenu();
 }
 
@@ -351,6 +424,12 @@ watch(
   () => store.projectModules.map((module) => module.id),
   async () => {
     await nextTick();
+    connections.value = connections.value.filter((connection) => {
+      return (
+        store.projectModules.some((module) => module.id === connection.fromId) &&
+        store.projectModules.some((module) => module.id === connection.toId)
+      );
+    });
     updateLines();
   }
 );
@@ -373,6 +452,31 @@ onBeforeUnmount(() => {
   padding: 16px;
   border-radius: 16px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+.panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.panel-header h2 {
+  margin: 0;
+}
+.hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.link-cancel {
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  padding: 2px 6px;
+  border-radius: 6px;
+  cursor: pointer;
 }
 .canvas-surface {
   min-height: 420px;
@@ -422,6 +526,15 @@ onBeforeUnmount(() => {
   display: block;
   color: #64748b;
   margin-top: 2px;
+}
+.link-badge {
+  font-size: 11px;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 2px 6px;
+  border-radius: 999px;
+  margin-left: auto;
+  margin-right: 8px;
 }
 .module-body {
   margin-top: 12px;
