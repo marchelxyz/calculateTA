@@ -130,15 +130,12 @@ DEFAULT_MODULES = [
 ]
 
 DEFAULT_RATES = [
-    {"role": "frontend", "level": "junior", "hourly_rate": 2000},
-    {"role": "frontend", "level": "middle", "hourly_rate": 3500},
-    {"role": "frontend", "level": "senior", "hourly_rate": 5000},
-    {"role": "backend", "level": "junior", "hourly_rate": 2500},
-    {"role": "backend", "level": "middle", "hourly_rate": 4000},
-    {"role": "backend", "level": "senior", "hourly_rate": 6000},
-    {"role": "qa", "level": "junior", "hourly_rate": 1200},
-    {"role": "qa", "level": "middle", "hourly_rate": 2000},
-    {"role": "qa", "level": "senior", "hourly_rate": 3000},
+    {"role": "Менеджер", "level": "middle", "hourly_rate": 4500},
+    {"role": "Проектировщик", "level": "middle", "hourly_rate": 4000},
+    {"role": "Дизайнер", "level": "middle", "hourly_rate": 3500},
+    {"role": "Бекенд", "level": "middle", "hourly_rate": 6000},
+    {"role": "Фронтенд", "level": "middle", "hourly_rate": 5000},
+    {"role": "Тестировщик", "level": "middle", "hourly_rate": 3000},
 ]
 
 
