@@ -9,8 +9,6 @@ import type {
   Rate,
   RateDraft,
   Summary,
-  InfrastructureItem,
-  ProjectInfrastructure,
 } from "../types";
 
 type State = {
@@ -21,8 +19,6 @@ type State = {
   rates: Rate[];
   summary: Summary | null;
   aiResult: AiParseResponse | null;
-  infrastructureCatalog: InfrastructureItem[];
-  projectInfrastructure: ProjectInfrastructure[];
   loading: boolean;
 };
 
@@ -35,8 +31,6 @@ export const useProjectStore = defineStore("project", {
     rates: [],
     summary: null,
     aiResult: null,
-    infrastructureCatalog: [],
-    projectInfrastructure: [],
     loading: false,
   }),
   actions: {
@@ -50,8 +44,6 @@ export const useProjectStore = defineStore("project", {
         }
         await this.loadProjectModules();
         await this.loadAssignments();
-        await this.loadInfrastructureCatalog();
-        await this.loadProjectInfrastructure();
         await this.loadSummary();
       } finally {
         this.loading = false;
@@ -161,47 +153,6 @@ export const useProjectStore = defineStore("project", {
       );
       this.summary = response.data;
     },
-    async loadInfrastructureCatalog() {
-      const response = await client.get<InfrastructureItem[]>("/infrastructure");
-      this.infrastructureCatalog = response.data;
-    },
-    async createInfrastructureItem(payload: {
-      code: string;
-      name: string;
-      description: string;
-      unit_cost: number;
-    }) {
-      const response = await client.post<InfrastructureItem>("/infrastructure", payload);
-      this.infrastructureCatalog = [...this.infrastructureCatalog, response.data];
-    },
-    async loadProjectInfrastructure() {
-      if (!this.project) return;
-      const response = await client.get<ProjectInfrastructure[]>(
-        `/projects/${this.project.id}/infrastructure`
-      );
-      this.projectInfrastructure = response.data;
-    },
-    async updateProjectInfrastructure(payload: ProjectInfrastructure[]) {
-      if (!this.project) return;
-      const data = payload.map((item) => ({
-        infrastructure_item_id: item.infrastructure_item_id,
-        quantity: item.quantity,
-      }));
-      const response = await client.put<ProjectInfrastructure[]>(
-        `/projects/${this.project.id}/infrastructure`,
-        data
-      );
-      this.projectInfrastructure = response.data;
-      await this.loadSummary();
-    },
-    async downloadExportCsv() {
-      if (!this.project) return;
-      await this.downloadFile(`/projects/${this.project.id}/export.csv`);
-    },
-    async downloadExportPdf() {
-      if (!this.project) return;
-      await this.downloadFile(`/projects/${this.project.id}/export.pdf`);
-    },
     async parseAi(prompt: string) {
       const response = await client.post<AiParseResponse>("/ai/parse", {
         prompt,
@@ -209,26 +160,5 @@ export const useProjectStore = defineStore("project", {
       this.aiResult = response.data;
       return response.data;
     },
-    async downloadFile(url: string) {
-      const response = await client.get<Blob>(url, { responseType: "blob" });
-      const contentType = response.headers["content-type"] ?? "";
-      const blob = new Blob([response.data], { type: contentType });
-      const link = document.createElement("a");
-      const objectUrl = URL.createObjectURL(blob);
-      link.href = objectUrl;
-      link.download = _getFilenameFromHeaders(response.headers) ?? "export";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(objectUrl);
-    },
   },
 });
-
-function _getFilenameFromHeaders(headers: Record<string, string>): string | null {
-  const contentDisposition = headers["content-disposition"];
-  if (!contentDisposition) return null;
-  const match = contentDisposition.match(/filename=\"?([^\"]+)\"?/i);
-  if (!match) return null;
-  return match[1];
-}

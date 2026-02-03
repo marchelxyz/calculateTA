@@ -11,19 +11,7 @@
         </button>
       </div>
     </header>
-    <nav class="tabs">
-      <button :class="{ active: activeTab === 'main' }" @click="activeTab = 'main'">
-        Главная
-      </button>
-      <button :class="{ active: activeTab === 'work' }" @click="activeTab = 'work'">
-        Работы
-      </button>
-      <button :class="{ active: activeTab === 'infra' }" @click="activeTab = 'infra'">
-        Инфраструктура
-      </button>
-    </nav>
-    <MainDashboard v-if="activeTab === 'main'" />
-    <div v-else-if="activeTab === 'work'" class="main">
+    <div class="main">
       <aside class="left">
         <ModulePalette />
         <AiAssistant />
@@ -37,7 +25,6 @@
         <SummaryPanel />
       </section>
     </div>
-    <InfrastructurePanel v-else />
   </div>
 </template>
 
@@ -50,12 +37,9 @@ import SlidersPanel from "./components/SlidersPanel.vue";
 import RatesPanel from "./components/RatesPanel.vue";
 import SummaryPanel from "./components/SummaryPanel.vue";
 import AiAssistant from "./components/AiAssistant.vue";
-import InfrastructurePanel from "./components/InfrastructurePanel.vue";
-import MainDashboard from "./components/MainDashboard.vue";
 
 const store = useProjectStore();
 const isDark = ref(false);
-const activeTab = ref<"main" | "work" | "infra">("main");
 
 onMounted(() => {
   loadTheme();
@@ -146,24 +130,6 @@ function saveTheme(value: boolean) {
   padding: 8px 12px;
   border-radius: 10px;
   cursor: pointer;
-}
-.tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-.tabs button {
-  border: 1px solid var(--border);
-  background: var(--panel-bg);
-  color: var(--text);
-  padding: 6px 12px;
-  border-radius: 10px;
-  cursor: pointer;
-}
-.tabs button.active {
-  background: var(--accent);
-  color: var(--accent-contrast);
-  border-color: var(--accent);
 }
 .main {
   display: grid;

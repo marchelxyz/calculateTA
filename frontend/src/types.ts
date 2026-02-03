@@ -55,7 +55,6 @@ export type SummaryTotals = {
   hours_backend: number;
   hours_qa: number;
   hours_total: number;
-  infra_cost: number;
   cost_total: number;
 };
 
@@ -87,18 +86,4 @@ export type AiParseResponse = {
   suggestions: AiSuggestion[];
   tasks: AiWbsTask[];
   rationale: string;
-};
-
-export type InfrastructureItem = {
-  id: number;
-  code: string;
-  name: string;
-  description: string;
-  unit_cost: number;
-};
-
-export type ProjectInfrastructure = {
-  id: number;
-  infrastructure_item_id: number;
-  quantity: number;
 };
