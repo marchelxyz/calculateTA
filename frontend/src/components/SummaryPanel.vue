@@ -21,7 +21,7 @@
         </div>
         <div>
           <span>Стоимость</span>
-          <strong>${{ formatNumber(store.summary.totals.cost_total) }}</strong>
+          <strong>₽{{ formatNumber(store.summary.totals.cost_total) }}</strong>
         </div>
       </div>
       <ScenarioChart :scenarios="store.summary.scenarios" />
@@ -29,7 +29,7 @@
         <div v-for="scenario in store.summary.scenarios" :key="scenario.label" class="scenario">
           <strong>{{ scenario.label }}</strong>
           <span>{{ formatNumber(scenario.total_hours) }} ч</span>
-          <span>${{ formatNumber(scenario.total_cost) }}</span>
+          <span>₽{{ formatNumber(scenario.total_cost) }}</span>
         </div>
       </div>
     </div>

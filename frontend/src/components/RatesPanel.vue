@@ -5,12 +5,18 @@
       <div class="row header">
         <span>Роль</span>
         <span>Уровень</span>
-        <span>Ставка ($/час)</span>
+        <span>Ставка (₽/час)</span>
       </div>
-      <div v-for="rate in editableRates" :key="rate.id" class="row">
-        <span>{{ rate.role }}</span>
-        <span>{{ rate.level }}</span>
+      <div v-for="rate in editableRates" :key="rateKey(rate)" class="row">
+        <input v-model="rate.role" />
+        <input v-model="rate.level" />
         <input type="number" v-model.number="rate.hourly_rate" />
+      </div>
+      <div class="row add-row">
+        <input v-model="newRate.role" placeholder="role" />
+        <input v-model="newRate.level" placeholder="level" />
+        <input type="number" v-model.number="newRate.hourly_rate" placeholder="₽/час" />
+        <button class="ghost" @click="addRate">Добавить</button>
       </div>
     </div>
     <button class="primary" @click="saveRates">Сохранить ставки</button>
@@ -20,10 +26,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { useProjectStore } from "../stores/project";
-import type { Rate } from "../types";
+import type { RateDraft } from "../types";
 
 const store = useProjectStore();
-const editableRates = ref<Rate[]>([]);
+const editableRates = ref<RateDraft[]>([]);
+const newRate = ref<RateDraft>({
+  role: "",
+  level: "",
+  hourly_rate: 0,
+});
 
 watch(
   () => store.rates,
@@ -37,9 +48,25 @@ const hasChanges = computed(() => {
   if (editableRates.value.length !== store.rates.length) return true;
   return editableRates.value.some((rate) => {
     const original = store.rates.find((item) => item.id === rate.id);
-    return !original || original.hourly_rate !== rate.hourly_rate;
+    if (!original) return true;
+    return (
+      original.role !== rate.role ||
+      original.level !== rate.level ||
+      original.hourly_rate !== rate.hourly_rate
+    );
   });
 });
+
+function addRate() {
+  if (!newRate.value.role.trim() || !newRate.value.level.trim()) return;
+  editableRates.value = [...editableRates.value, { ...newRate.value }];
+  newRate.value = { role: "", level: "", hourly_rate: 0 };
+}
+
+function rateKey(rate: RateDraft) {
+  if (rate.id) return `id-${rate.id}`;
+  return `${rate.role}-${rate.level}`;
+}
 
 function saveRates() {
   if (!hasChanges.value) return;
@@ -66,6 +93,9 @@ function saveRates() {
   align-items: center;
   font-size: 13px;
 }
+.add-row {
+  grid-template-columns: 1fr 1fr 120px 120px;
+}
 .header {
   font-weight: 600;
   color: #0f172a;
@@ -82,6 +112,14 @@ input {
   border: none;
   padding: 8px 14px;
   border-radius: 10px;
+  cursor: pointer;
+}
+.ghost {
+  background: transparent;
+  border: 1px dashed #cbd5f5;
+  color: #1d4ed8;
+  padding: 6px 10px;
+  border-radius: 8px;
   cursor: pointer;
 }
 </style>

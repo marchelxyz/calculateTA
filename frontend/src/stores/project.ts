@@ -7,6 +7,7 @@ import type {
   ProjectModule,
   Assignment,
   Rate,
+  RateDraft,
   Summary,
 } from "../types";
 
@@ -55,6 +56,17 @@ export const useProjectStore = defineStore("project", {
     async loadModules() {
       const response = await client.get<Module[]>("/modules");
       this.modules = response.data;
+    },
+    async createModule(payload: {
+      code: string;
+      name: string;
+      description: string;
+      hours_frontend: number;
+      hours_backend: number;
+      hours_qa: number;
+    }) {
+      const response = await client.post<Module>("/modules", payload);
+      this.modules = [...this.modules, response.data];
     },
     async loadProjectModules() {
       if (!this.project) return;
@@ -112,7 +124,7 @@ export const useProjectStore = defineStore("project", {
       const response = await client.get<Rate[]>("/rates");
       this.rates = response.data;
     },
-    async updateRates(rates: Rate[]) {
+    async updateRates(rates: RateDraft[]) {
       const payload = rates.map((rate) => ({
         role: rate.role,
         level: rate.level,
