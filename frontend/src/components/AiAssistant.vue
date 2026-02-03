@@ -1,6 +1,10 @@
 <template>
   <section class="panel">
     <h2>AI ассистент</h2>
+    <p class="hint">
+      AI разбивает описание продукта на WBS-задачи и сопоставляет их с модулями.
+      Нажмите «Добавить модули», чтобы быстро заполнить холст.
+    </p>
     <textarea
       v-model="prompt"
       placeholder="Опишите проект одним предложением..."
@@ -98,6 +102,11 @@ async function addSuggested() {
   padding: 16px;
   border-radius: 16px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+.hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #64748b;
 }
 textarea {
   width: 100%;
