@@ -24,6 +24,25 @@ class ModuleOut(ModuleBase):
     id: int
 
 
+class InfrastructureItemBase(BaseModel):
+    """Infrastructure item base schema."""
+
+    code: str
+    name: str
+    description: str = ""
+    unit_cost: float
+
+
+class InfrastructureItemCreate(InfrastructureItemBase):
+    """Infrastructure item creation schema."""
+
+
+class InfrastructureItemOut(InfrastructureItemBase):
+    """Infrastructure item response schema."""
+
+    id: int
+
+
 class ProjectCreate(BaseModel):
     """Project creation payload."""
 
@@ -83,6 +102,21 @@ class ProjectModuleOut(BaseModel):
     legacy_code: bool | None
 
 
+class ProjectInfrastructureUpsert(BaseModel):
+    """Upsert infrastructure item for a project."""
+
+    infrastructure_item_id: int
+    quantity: int = Field(ge=0)
+
+
+class ProjectInfrastructureOut(BaseModel):
+    """Project infrastructure response."""
+
+    id: int
+    infrastructure_item_id: int
+    quantity: int
+
+
 class RateUpsert(BaseModel):
     """Upsert hourly rate."""
 
@@ -126,6 +160,7 @@ class SummaryTotals(BaseModel):
     hours_backend: float
     hours_qa: float
     hours_total: float
+    infra_cost: float
     cost_total: float
 
 
