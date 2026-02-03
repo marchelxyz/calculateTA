@@ -17,7 +17,7 @@ def list_modules(session: Session = Depends(get_db_session)) -> list[ModuleOut]:
     """Return module catalog."""
 
     result = session.execute(select(Module).options(joinedload(Module.role_hours)))
-    return [_serialize_module(module) for module in result.scalars()]
+    return [_serialize_module(module) for module in result.unique().scalars()]
 
 
 @router.post("", response_model=ModuleOut)

@@ -72,7 +72,7 @@ def _load_project_modules(session: Session, project_id: int) -> list[ProjectModu
         .options(joinedload(ProjectModule.module).joinedload(Module.role_hours))
         .join(ProjectModule.module)
     )
-    return list(result.scalars())
+    return list(result.unique().scalars())
 
 
 def _load_project_nodes(session: Session, project_id: int) -> list[ProjectNode]:
@@ -81,7 +81,7 @@ def _load_project_nodes(session: Session, project_id: int) -> list[ProjectNode]:
         .where(ProjectNode.project_id == project_id)
         .options(joinedload(ProjectNode.role_hours))
     )
-    return list(result.scalars())
+    return list(result.unique().scalars())
 
 
 def _load_project_infrastructure(
