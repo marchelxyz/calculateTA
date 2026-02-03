@@ -34,6 +34,8 @@ class Settings(BaseSettings):
         "award": 2.5,
     }
     legacy_multiplier: float = 1.3
+    admin_username: str = "admin"
+    admin_password: str = "admin"
 
     @field_validator("database_url")
     @classmethod

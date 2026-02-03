@@ -4,7 +4,18 @@ from sqlalchemy import inspect
 from sqlalchemy.engine import Engine
 
 from app.db import Base, engine
-from app.models import Assignment, Module, Project, ProjectModule, Rate
+from app.models import (
+    Assignment,
+    InfrastructureItem,
+    Module,
+    Project,
+    ProjectCoefficient,
+    ProjectConnection,
+    ProjectInfrastructure,
+    ProjectModule,
+    Rate,
+    User,
+)
 
 
 def init_and_verify_db() -> None:
@@ -22,6 +33,11 @@ def _verify_schema(db_engine: Engine) -> None:
         "project_modules": _columns(ProjectModule),
         "rates": _columns(Rate),
         "assignments": _columns(Assignment),
+        "project_coefficients": _columns(ProjectCoefficient),
+        "infrastructure_items": _columns(InfrastructureItem),
+        "project_infrastructure": _columns(ProjectInfrastructure),
+        "project_connections": _columns(ProjectConnection),
+        "users": _columns(User),
     }
 
     missing_tables = [table for table in expected if not inspector.has_table(table)]

@@ -12,11 +12,13 @@ from app.schemas import (
     ProjectCreate,
     ProjectCoefficientCreate,
     ProjectCoefficientOut,
+    ProjectListOut,
     ProjectModuleCreate,
     ProjectModuleOut,
     ProjectModuleUpdate,
     ProjectOut,
     ProjectSettings,
+    ProjectUpdate,
     SummaryOut,
 )
 from app.services.summary_service import build_project_summary
@@ -42,6 +44,16 @@ def create_project(
     return ProjectOut(**project.__dict__)
 
 
+@router.get("", response_model=list[ProjectListOut])
+def list_projects(
+    session: Session = Depends(get_db_session),
+) -> list[ProjectListOut]:
+    """List projects."""
+
+    result = session.execute(select(Project))
+    return [ProjectListOut(**project.__dict__) for project in result.scalars()]
+
+
 @router.get("/{project_id}", response_model=ProjectOut)
 def get_project(
     project_id: int,
@@ -50,6 +62,22 @@ def get_project(
     """Get project by id."""
 
     project = _get_project(session, project_id)
+    return ProjectOut(**project.__dict__)
+
+
+@router.put("/{project_id}", response_model=ProjectOut)
+def update_project(
+    project_id: int,
+    payload: ProjectUpdate,
+    session: Session = Depends(get_db_session),
+) -> ProjectOut:
+    """Update project metadata."""
+
+    project = _get_project(session, project_id)
+    project.name = payload.name
+    project.description = payload.description
+    session.commit()
+    session.refresh(project)
     return ProjectOut(**project.__dict__)
 
 
