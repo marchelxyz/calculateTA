@@ -64,6 +64,8 @@ const newItem = ref({
   description: "",
   unit_cost: 0,
 });
+const autoSaveEnabled = ref(false);
+let autoSaveTimer: number | null = null;
 
 const existingMap = computed(() => {
   const map = new Map<number, ProjectInfrastructure>();
@@ -81,6 +83,7 @@ watch(
       next[item.id] = existingMap.value.get(item.id)?.quantity ?? 0;
     });
     drafts.value = next;
+    autoSaveEnabled.value = true;
   },
   { immediate: true, deep: true }
 );
@@ -92,6 +95,32 @@ async function save() {
     quantity: Math.max(0, Number(drafts.value[item.id] ?? 0)),
   }));
   await store.updateProjectInfrastructure(payload);
+}
+
+const hasChanges = computed(() => {
+  return store.infrastructureCatalog.some((item) => {
+    const current = drafts.value[item.id] ?? 0;
+    const original = existingMap.value.get(item.id)?.quantity ?? 0;
+    return current !== original;
+  });
+});
+
+watch(
+  () => drafts.value,
+  () => {
+    if (!autoSaveEnabled.value || !hasChanges.value) return;
+    scheduleAutoSave();
+  },
+  { deep: true }
+);
+
+function scheduleAutoSave() {
+  if (autoSaveTimer) {
+    window.clearTimeout(autoSaveTimer);
+  }
+  autoSaveTimer = window.setTimeout(() => {
+    save();
+  }, 600);
 }
 
 async function createItem() {

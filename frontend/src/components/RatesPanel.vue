@@ -39,11 +39,14 @@ const newRate = ref<RateDraft>({
   level: "",
   hourly_rate: 0,
 });
+const autoSaveEnabled = ref(false);
+let autoSaveTimer: number | null = null;
 
 watch(
   () => store.rates,
   (rates) => {
     editableRates.value = rates.map((rate) => ({ ...rate }));
+    autoSaveEnabled.value = true;
   },
   { immediate: true }
 );
@@ -79,6 +82,24 @@ function removeRate(rate: RateDraft) {
 function saveRates() {
   if (!hasChanges.value) return;
   store.updateRates(editableRates.value);
+}
+
+watch(
+  () => editableRates.value,
+  () => {
+    if (!autoSaveEnabled.value || !hasChanges.value) return;
+    scheduleAutoSave();
+  },
+  { deep: true }
+);
+
+function scheduleAutoSave() {
+  if (autoSaveTimer) {
+    window.clearTimeout(autoSaveTimer);
+  }
+  autoSaveTimer = window.setTimeout(() => {
+    saveRates();
+  }, 600);
 }
 </script>
 

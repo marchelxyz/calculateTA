@@ -14,7 +14,7 @@
                 {{ project.name }}
               </option>
             </select>
-            <button class="ghost" @click="createProject">Новый проект</button>
+            <button class="ghost" @click="saveAndClear">Сохранить и очистить</button>
             <button class="ghost" @click="logout">Выйти</button>
           </div>
         </div>
@@ -113,6 +113,10 @@ async function createProject() {
   const project = await store.createProject(name);
   selectedProjectId.value = project.id;
   await store.setActiveProject(project.id);
+}
+
+async function saveAndClear() {
+  await createProject();
 }
 
 async function logout() {
