@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-5"
     openai_timeout_seconds: int = 45
 
-    frontend_dist_path: str = "frontend/dist"
+    frontend_dist_path: str = "../frontend/dist"
     cors_allowed_origins: list[AnyUrl] = []
 
     optimistic_multiplier: float = 0.85

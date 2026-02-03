@@ -39,8 +39,8 @@ def _configure_cors(app: FastAPI) -> None:
 
 
 def _mount_frontend(app: FastAPI) -> None:
-    dist_path = Path(settings.frontend_dist_path)
-    if dist_path.exists():
+    dist_path = _resolve_frontend_dist()
+    if dist_path:
         app.mount("/", StaticFiles(directory=dist_path, html=True), name="frontend")
 
         @app.get("/")
@@ -57,6 +57,18 @@ def _register_startup(app: FastAPI) -> None:
             seed_defaults(session)
         finally:
             session.close()
+
+
+def _resolve_frontend_dist() -> Path | None:
+    """Resolve frontend dist directory location."""
+
+    configured = Path(settings.frontend_dist_path)
+    if configured.exists():
+        return configured
+    fallback = Path("frontend/dist")
+    if fallback.exists():
+        return fallback
+    return None
 
 
 app = create_app()
