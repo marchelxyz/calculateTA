@@ -20,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import Draggable from "vue-draggable-next";
+import { VueDraggableNext as Draggable } from "vue-draggable-next";
 import { useProjectStore } from "../stores/project";
 import type { Module } from "../types";
 
