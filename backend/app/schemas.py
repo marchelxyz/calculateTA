@@ -50,6 +50,24 @@ class ProjectOut(BaseModel):
     legacy_code: bool
 
 
+class ProjectCoefficientBase(BaseModel):
+    """Project coefficient base schema."""
+
+    name: str
+    multiplier: float = Field(ge=0)
+
+
+class ProjectCoefficientCreate(ProjectCoefficientBase):
+    """Project coefficient creation schema."""
+
+
+class ProjectCoefficientOut(ProjectCoefficientBase):
+    """Project coefficient response schema."""
+
+    id: int
+    project_id: int
+
+
 class ProjectModuleCreate(BaseModel):
     """Add module to project payload."""
 

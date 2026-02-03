@@ -43,6 +43,18 @@ def apply_project_coefficients(
     )
 
 
+def apply_extra_multiplier(hours: ModuleHours, multiplier: float) -> ModuleHours:
+    """Apply additional multiplier to all role hours."""
+
+    if multiplier == 1.0:
+        return hours
+    return ModuleHours(
+        frontend=hours.frontend * multiplier,
+        backend=hours.backend * multiplier,
+        qa=hours.qa * multiplier,
+    )
+
+
 def merge_module_overrides(
     base_hours: ModuleHours,
     override_frontend: float | None,

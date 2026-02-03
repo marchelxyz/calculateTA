@@ -69,6 +69,13 @@ export type Summary = {
   scenarios: SummaryScenario[];
 };
 
+export type ProjectCoefficient = {
+  id: number;
+  project_id: number;
+  name: string;
+  multiplier: number;
+};
+
 export type AiSuggestion = {
   module_code: string;
   confidence: number;
