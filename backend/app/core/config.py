@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import AnyUrl
+from pydantic import AnyUrl, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,11 +35,28 @@ class Settings(BaseSettings):
     }
     legacy_multiplier: float = 1.3
 
+    @field_validator("database_url")
+    @classmethod
+    def _validate_database_url(cls, value: str) -> str:
+        """Normalize database URL for psycopg driver."""
+
+        return _normalize_database_url(value)
+
 
 def get_settings() -> Settings:
     """Return cached settings instance."""
 
     return Settings()
+
+
+def _normalize_database_url(value: str) -> str:
+    """Normalize database URL to use psycopg driver."""
+
+    if value.startswith("postgres://"):
+        value = "postgresql://" + value.removeprefix("postgres://")
+    if value.startswith("postgresql://") and "+psycopg" not in value:
+        value = value.replace("postgresql://", "postgresql+psycopg://", 1)
+    return value
 
 
 settings = get_settings()
