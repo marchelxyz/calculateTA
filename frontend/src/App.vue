@@ -1,56 +1,78 @@
 <template>
   <div class="app" :class="{ dark: isDark }">
-    <header class="header">
-      <div class="header-top">
-        <div>
-          <h1>Центр управления полетами</h1>
-          <p>Интерактивный конструктор проекта с пересчетом денег и времени.</p>
+    <AuthGate v-if="!ready || !store.currentUser" @authenticated="onAuthenticated" />
+    <template v-else>
+      <header class="header">
+        <div class="header-top">
+          <div>
+            <h1>Центр управления полетами</h1>
+            <p>Интерактивный конструктор проекта с пересчетом денег и времени.</p>
+          </div>
+          <div class="header-actions">
+            <select v-model.number="selectedProjectId" @change="changeProject">
+              <option v-for="project in store.projects" :key="project.id" :value="project.id">
+                {{ project.name }}
+              </option>
+            </select>
+            <button class="ghost" @click="saveAndClear">Сохранить и очистить</button>
+            <button class="ghost" @click="toggleTheme">
+              {{ isDark ? "Светлая тема" : "Темная тема" }}
+            </button>
+            <button class="ghost" @click="logout">Выйти</button>
+          </div>
         </div>
-        <button class="theme-toggle" @click="toggleTheme">
-          {{ isDark ? "Светлая тема" : "Темная тема" }}
+      </header>
+      <nav class="tabs">
+        <button :class="{ active: activeTab === 'main' }" @click="activeTab = 'main'">
+          Главная
         </button>
+        <button :class="{ active: activeTab === 'work' }" @click="activeTab = 'work'">
+          Работы
+        </button>
+        <button :class="{ active: activeTab === 'infra' }" @click="activeTab = 'infra'">
+          Инфраструктура
+        </button>
+        <button :class="{ active: activeTab === 'modules' }" @click="activeTab = 'modules'">
+          Модули
+        </button>
+        <button :class="{ active: activeTab === 'team' }" @click="activeTab = 'team'">
+          Команда
+        </button>
+        <button
+          v-if="isAdmin"
+          :class="{ active: activeTab === 'admin' }"
+          @click="activeTab = 'admin'"
+        >
+          Админ
+        </button>
+      </nav>
+      <MainDashboard v-if="activeTab === 'main'" />
+      <div v-else-if="activeTab === 'work'" class="main">
+        <aside class="left">
+          <ModulePalette />
+          <AiAssistant />
+        </aside>
+        <section class="right">
+          <div class="controls">
+            <SlidersPanel />
+          </div>
+          <ProjectCanvas />
+          <SummaryPanel />
+        </section>
       </div>
-    </header>
-    <nav class="tabs">
-      <button :class="{ active: activeTab === 'main' }" @click="activeTab = 'main'">
-        Главная
-      </button>
-      <button :class="{ active: activeTab === 'work' }" @click="activeTab = 'work'">
-        Работы
-      </button>
-      <button :class="{ active: activeTab === 'infra' }" @click="activeTab = 'infra'">
-        Инфраструктура
-      </button>
-      <button :class="{ active: activeTab === 'modules' }" @click="activeTab = 'modules'">
-        Модули
-      </button>
-      <button :class="{ active: activeTab === 'team' }" @click="activeTab = 'team'">
-        Команда
-      </button>
-    </nav>
-    <MainDashboard v-if="activeTab === 'main'" />
-    <div v-else-if="activeTab === 'work'" class="main">
-      <aside class="left">
-        <ModulePalette />
-        <AiAssistant />
-      </aside>
-      <section class="right">
-        <div class="controls">
-          <SlidersPanel />
-        </div>
-        <ProjectCanvas />
-        <SummaryPanel />
-      </section>
-    </div>
-    <InfrastructurePanel v-else-if="activeTab === 'infra'" />
-    <ModulesPanel v-else-if="activeTab === 'modules'" />
-    <RatesPanel v-else />
+      <InfrastructurePanel v-else-if="activeTab === 'infra'" />
+      <ModulesPanel v-else-if="activeTab === 'modules'" />
+      <RatesPanel v-else-if="activeTab === 'team'" />
+      <AdminPanel v-else />
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useProjectStore } from "./stores/project";
+import AdminPanel from "./components/AdminPanel.vue";
+import AuthGate from "./components/AuthGate.vue";
 import ModulePalette from "./components/ModulePalette.vue";
 import ProjectCanvas from "./components/ProjectCanvas.vue";
 import SlidersPanel from "./components/SlidersPanel.vue";
@@ -62,13 +84,59 @@ import MainDashboard from "./components/MainDashboard.vue";
 import ModulesPanel from "./components/ModulesPanel.vue";
 
 const store = useProjectStore();
-const activeTab = ref<"main" | "work" | "infra" | "modules" | "team">("main");
+const activeTab = ref<"main" | "work" | "infra" | "modules" | "team" | "admin">("main");
+const ready = ref(false);
+const selectedProjectId = ref<number | null>(null);
+const isAdmin = computed(() => store.currentUser?.role === "admin");
 const isDark = ref(false);
 
 onMounted(() => {
-  store.bootstrap();
-  isDark.value = localStorage.getItem("theme") === "dark";
+  init();
 });
+
+async function init() {
+  isDark.value = localStorage.getItem("theme") === "dark";
+  const username = localStorage.getItem("auth_username");
+  const password = localStorage.getItem("auth_password");
+  if (username && password) {
+    try {
+      await store.checkAuth();
+      await store.bootstrap();
+      selectedProjectId.value = store.activeProjectId;
+    } catch {
+      await store.logout();
+    }
+  }
+  ready.value = true;
+}
+
+async function onAuthenticated() {
+  await store.bootstrap();
+  selectedProjectId.value = store.activeProjectId;
+}
+
+async function changeProject() {
+  if (!selectedProjectId.value) return;
+  await store.setActiveProject(selectedProjectId.value);
+}
+
+async function createProject() {
+  const name = window.prompt("Название проекта");
+  if (!name) return;
+  const project = await store.createProject(name);
+  selectedProjectId.value = project.id;
+  await store.setActiveProject(project.id);
+}
+
+async function saveAndClear() {
+  await createProject();
+}
+
+async function logout() {
+  await store.logout();
+  ready.value = false;
+  await init();
+}
 
 function toggleTheme() {
   isDark.value = !isDark.value;
@@ -155,12 +223,25 @@ function toggleTheme() {
   justify-content: space-between;
   gap: 16px;
 }
-.theme-toggle {
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.header-actions select {
+  padding: 6px 8px;
+  border-radius: 8px;
   border: 1px solid var(--border);
-  background: var(--panel-bg);
+  background: var(--input-bg);
   color: var(--text);
-  padding: 6px 12px;
-  border-radius: 10px;
+}
+.ghost {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 8px;
   cursor: pointer;
 }
 .header h1 {

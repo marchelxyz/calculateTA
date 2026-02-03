@@ -6,16 +6,21 @@ from sqlalchemy.engine import Engine
 from app.db import Base, engine
 from app.models import (
     Assignment,
+    InfrastructureItem,
     Module,
     ModuleRoleHours,
     Project,
+    ProjectCoefficient,
+    ProjectConnection,
+    ProjectInfrastructure,
+    ProjectMindmapVersion,
     ProjectModule,
     ProjectNode,
     ProjectNodeConnection,
     ProjectNodeRoleHours,
     ProjectNote,
-    ProjectMindmapVersion,
     Rate,
+    User,
 )
 
 
@@ -40,6 +45,11 @@ def _verify_schema(db_engine: Engine) -> None:
         "project_mindmap_versions": _columns(ProjectMindmapVersion),
         "rates": _columns(Rate),
         "assignments": _columns(Assignment),
+        "project_coefficients": _columns(ProjectCoefficient),
+        "infrastructure_items": _columns(InfrastructureItem),
+        "project_infrastructure": _columns(ProjectInfrastructure),
+        "project_connections": _columns(ProjectConnection),
+        "users": _columns(User),
     }
 
     missing_tables = [table for table in expected if not inspector.has_table(table)]

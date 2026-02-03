@@ -224,6 +224,18 @@ class ProjectMindmapVersion(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     project: Mapped[Project] = relationship(back_populates="mindmap_versions")
+class ProjectConnection(Base):
+    """Connection between project modules."""
+
+    __tablename__ = "project_connections"
+    __table_args__ = (
+        UniqueConstraint("project_id", "from_project_module_id", "to_project_module_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    from_project_module_id: Mapped[int] = mapped_column(ForeignKey("project_modules.id"))
+    to_project_module_id: Mapped[int] = mapped_column(ForeignKey("project_modules.id"))
 
 
 class Rate(Base):
@@ -301,3 +313,17 @@ class ProjectInfrastructure(Base):
     infrastructure_item: Mapped[InfrastructureItem] = relationship(
         back_populates="project_infrastructure"
     )
+
+
+class User(Base):
+    """Application user."""
+
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(128))
+    role: Mapped[str] = mapped_column(String(32), default="participant")
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

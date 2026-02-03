@@ -175,6 +175,13 @@ class ProjectCreate(BaseModel):
     description: str = ""
 
 
+class ProjectUpdate(BaseModel):
+    """Project update payload."""
+
+    name: str
+    description: str = ""
+
+
 class ProjectSettings(BaseModel):
     """Project settings payload."""
 
@@ -192,6 +199,10 @@ class ProjectOut(BaseModel):
     uncertainty_level: str
     uiux_level: str
     legacy_code: bool
+
+
+class ProjectListOut(ProjectOut):
+    """Project list response."""
 
 
 class ProjectCoefficientBase(BaseModel):
@@ -245,6 +256,20 @@ class ProjectModuleOut(BaseModel):
     legacy_code: bool | None
 
 
+class ProjectConnectionUpsert(BaseModel):
+    """Upsert project connection."""
+
+    from_project_module_id: int
+    to_project_module_id: int
+
+
+class ProjectConnectionOut(ProjectConnectionUpsert):
+    """Project connection response."""
+
+    id: int
+    project_id: int
+
+
 class ProjectInfrastructureUpsert(BaseModel):
     """Upsert infrastructure item for a project."""
 
@@ -258,6 +283,22 @@ class ProjectInfrastructureOut(BaseModel):
     id: int
     infrastructure_item_id: int
     quantity: int
+
+
+class UserCreate(BaseModel):
+    """User creation payload."""
+
+    username: str
+    password: str
+    role: str = "participant"
+
+
+class UserOut(BaseModel):
+    """User response."""
+
+    id: int
+    username: str
+    role: str
 
 
 class RateUpsert(BaseModel):

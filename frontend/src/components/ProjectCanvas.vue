@@ -368,7 +368,7 @@ import { toPng } from "html-to-image";
 import { jsPDF } from "jspdf";
 import { VueDraggableNext as Draggable } from "vue-draggable-next";
 import { useProjectStore } from "../stores/project";
-import type { ProjectModule, ProjectNode, ProjectNote } from "../types";
+import type { ProjectConnection, ProjectModule, ProjectNode, ProjectNote } from "../types";
 
 const store = useProjectStore();
 const canvasRef = ref<HTMLElement | null>(null);
@@ -1025,6 +1025,7 @@ function handleNodeClick(moduleId: number) {
     ];
     updateConnections(nextConnections);
     scheduleLineUpdate();
+    saveConnections();
   }
   cancelLinkMode();
 }
@@ -1037,12 +1038,14 @@ function removeConnections() {
   );
   updateConnections(nextConnections);
   scheduleLineUpdate();
+  saveConnections();
   hideContextMenu();
 }
 
 function clearConnections() {
   updateConnections([]);
   scheduleLineUpdate();
+  saveConnections();
 }
 
 function resetModule() {
@@ -1072,6 +1075,7 @@ function removeModule() {
   );
   updateConnections(nextConnections);
   scheduleLineUpdate();
+  saveConnections();
   hideContextMenu();
 }
 
@@ -1315,6 +1319,7 @@ watch(
       buildMindmapLayout();
     }
     updateLines();
+    saveConnections();
   }
 );
 
@@ -1350,6 +1355,18 @@ watch(
 );
 
 watch(
+  () => store.connections,
+  (items) => {
+    connections.value = items.map((item) => ({
+      fromId: item.from_project_module_id,
+      toId: item.to_project_module_id,
+    }));
+    scheduleLineUpdate();
+  },
+  { immediate: true }
+);
+
+watch(
   () => mindmapMode.value,
   (value) => {
     if (value) {
@@ -1362,7 +1379,6 @@ watch(
     scheduleLineUpdate();
   }
 );
-
 onMounted(() => {
   window.addEventListener("resize", handleResize);
   nextTick(() => {
@@ -1373,6 +1389,17 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener("resize", handleResize);
 });
+
+function saveConnections() {
+  if (!store.project) return;
+  const payload: ProjectConnection[] = connections.value.map((item) => ({
+    id: 0,
+    project_id: store.project?.id ?? 0,
+    from_project_module_id: item.fromId,
+    to_project_module_id: item.toId,
+  }));
+  store.updateConnections(payload);
+}
 </script>
 
 <style scoped>

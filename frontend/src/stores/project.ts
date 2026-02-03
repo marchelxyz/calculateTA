@@ -5,6 +5,8 @@ import type {
   AiParseResponse,
   Module,
   Project,
+  ProjectConnection,
+  ProjectList,
   ProjectModule,
   Assignment,
   Rate,
@@ -19,12 +21,17 @@ import type {
   MindmapSnapshot,
   MindmapVersion,
   MindmapVersionDetail,
+  User,
 } from "../types";
 
 type State = {
+  currentUser: User | null;
   project: Project | null;
+  projects: ProjectList[];
+  activeProjectId: number | null;
   modules: Module[];
   projectModules: ProjectModule[];
+  connections: ProjectConnection[];
   assignments: Assignment[];
   rates: Rate[];
   summary: Summary | null;
@@ -36,14 +43,19 @@ type State = {
   mindmapConnections: ProjectNodeConnection[];
   mindmapNotes: ProjectNote[];
   mindmapVersions: MindmapVersion[];
+  users: User[];
   loading: boolean;
 };
 
 export const useProjectStore = defineStore("project", {
   state: (): State => ({
+    currentUser: null,
     project: null,
+    projects: [],
+    activeProjectId: null,
     modules: [],
     projectModules: [],
+    connections: [],
     assignments: [],
     rates: [],
     summary: null,
@@ -55,33 +67,75 @@ export const useProjectStore = defineStore("project", {
     mindmapConnections: [],
     mindmapNotes: [],
     mindmapVersions: [],
+    users: [],
     loading: false,
   }),
   actions: {
+    async checkAuth() {
+      const response = await client.get<User>("/auth/me");
+      this.currentUser = response.data;
+      return response.data;
+    },
+    async logout() {
+      localStorage.removeItem("auth_username");
+      localStorage.removeItem("auth_password");
+      this.currentUser = null;
+    },
     async bootstrap() {
       this.loading = true;
       try {
         await this.loadModules();
         await this.loadRates();
-        if (!this.project) {
-          await this.createProject("Новый проект");
-        }
-        await this.loadProjectModules();
-        await this.loadAssignments();
-        await this.loadCoefficients();
         await this.loadInfrastructureCatalog();
-        await this.loadProjectInfrastructure();
-        await this.loadMindmapNodes();
-        await this.loadMindmapConnections();
-        await this.loadMindmapNotes();
-        await this.loadMindmapVersions();
-        await this.loadSummary();
+        await this.loadProjects();
+        await this.ensureActiveProject();
       } finally {
         this.loading = false;
       }
     },
+    async loadProjects() {
+      const response = await client.get<ProjectList[]>("/projects");
+      this.projects = response.data;
+    },
+    async ensureActiveProject() {
+      if (this.projects.length === 0) {
+        const created = await this.createProject("Новый проект");
+        await this.setActiveProject(created.id);
+        return;
+      }
+      const stored = _getStoredProjectId();
+      const selected =
+        this.projects.find((project) => project.id === stored) ?? this.projects[0];
+      await this.setActiveProject(selected.id);
+    },
+    async setActiveProject(projectId: number) {
+      this.activeProjectId = projectId;
+      localStorage.setItem("active_project_id", String(projectId));
+      await this.loadProject(projectId);
+      await this.loadProjectModules();
+      await this.loadAssignments();
+      await this.loadConnections();
+      await this.loadCoefficients();
+      await this.loadProjectInfrastructure();
+      await this.loadMindmapNodes();
+      await this.loadMindmapConnections();
+      await this.loadMindmapNotes();
+      await this.loadMindmapVersions();
+      await this.loadSummary();
+    },
     async createProject(name: string) {
       const response = await client.post<Project>("/projects", { name });
+      const project = response.data;
+      this.projects = [...this.projects, project];
+      return project;
+    },
+    async updateProject(projectId: number, payload: { name: string; description: string }) {
+      const response = await client.put<Project>(`/projects/${projectId}`, payload);
+      this.project = response.data;
+      await this.loadProjects();
+    },
+    async loadProject(projectId: number) {
+      const response = await client.get<Project>(`/projects/${projectId}`);
       this.project = response.data;
     },
     async loadModules() {
@@ -241,6 +295,33 @@ export const useProjectStore = defineStore("project", {
       );
       this.projectInfrastructure = response.data;
       await this.loadSummary();
+    },
+    async loadConnections() {
+      if (!this.project) return;
+      const response = await client.get<ProjectConnection[]>(
+        `/projects/${this.project.id}/connections`
+      );
+      this.connections = response.data;
+    },
+    async updateConnections(payload: ProjectConnection[]) {
+      if (!this.project) return;
+      const data = payload.map((item) => ({
+        from_project_module_id: item.from_project_module_id,
+        to_project_module_id: item.to_project_module_id,
+      }));
+      const response = await client.put<ProjectConnection[]>(
+        `/projects/${this.project.id}/connections`,
+        data
+      );
+      this.connections = response.data;
+    },
+    async loadUsers() {
+      const response = await client.get<User[]>("/users");
+      this.users = response.data;
+    },
+    async createUser(payload: { username: string; password: string; role: string }) {
+      const response = await client.post<User>("/users", payload);
+      this.users = [...this.users, response.data];
     },
     async downloadExportCsv() {
       if (!this.project) return;
@@ -466,6 +547,13 @@ export const useProjectStore = defineStore("project", {
     },
   },
 });
+
+function _getStoredProjectId(): number | null {
+  const raw = localStorage.getItem("active_project_id");
+  if (!raw) return null;
+  const value = Number(raw);
+  return Number.isNaN(value) ? null : value;
+}
 
 function _getFilenameFromHeaders(headers: Record<string, string>): string | null {
   const contentDisposition = headers["content-disposition"];

@@ -18,6 +18,8 @@ export type Project = {
   legacy_code: boolean;
 };
 
+export type ProjectList = Project;
+
 export type ProjectModule = {
   id: number;
   module_id: number;
@@ -141,6 +143,19 @@ export type SummaryScenario = {
 export type Summary = {
   totals: SummaryTotals;
   scenarios: SummaryScenario[];
+};
+
+export type ProjectConnection = {
+  id: number;
+  project_id: number;
+  from_project_module_id: number;
+  to_project_module_id: number;
+};
+
+export type User = {
+  id: number;
+  username: string;
+  role: string;
 };
 
 export type ProjectCoefficient = {
