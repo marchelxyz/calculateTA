@@ -9,9 +9,14 @@
           <button class="link-cancel" @click="cancelLinkMode">Отмена</button>
         </p>
       </div>
-      <button class="ghost" @click="clearConnections" :disabled="connections.length === 0">
-        Очистить связи
-      </button>
+      <div class="actions">
+        <button class="ghost" @click="toggleMindmap">
+          {{ mindmapMode ? "Свободная раскладка" : "Режим XMind" }}
+        </button>
+        <button class="ghost" @click="clearConnections" :disabled="connections.length === 0">
+          Очистить связи
+        </button>
+      </div>
     </div>
     <div class="canvas-surface" ref="canvasRef" @click="hideContextMenu">
       <svg v-if="lines.length" class="canvas-lines">
@@ -21,7 +26,130 @@
           :d="linePath(line)"
         />
       </svg>
+      <template v-if="mindmapMode">
+        <div class="mindmap-nodes">
+          <div
+            v-for="element in store.projectModules"
+            :key="element.id"
+            class="module-card absolute"
+            :ref="(el) => setNodeRef(el, element.id)"
+            :style="nodeStyle(element.id)"
+            @contextmenu="openContextMenu($event, element.id)"
+            @click.stop="handleNodeClick(element.id)"
+          >
+            <header class="module-header">
+              <div>
+                <strong>{{ moduleName(element.module_id) }}</strong>
+                <small v-if="element.custom_name">{{ element.custom_name }}</small>
+              </div>
+              <span v-if="linkMode.fromId === element.id" class="link-badge">
+                Источник связи
+              </span>
+              <button class="ghost" @click="store.removeProjectModule(element.id)">
+                Удалить
+              </button>
+            </header>
+            <div class="module-body">
+              <div class="grid">
+                <label>
+                  FE часы
+                  <input
+                    type="number"
+                    :value="element.override_frontend ?? baseHours(element.module_id).hours_frontend"
+                    @change="updateHours(element, 'override_frontend', $event)"
+                  />
+                </label>
+                <label>
+                  BE часы
+                  <input
+                    type="number"
+                    :value="element.override_backend ?? baseHours(element.module_id).hours_backend"
+                    @change="updateHours(element, 'override_backend', $event)"
+                  />
+                </label>
+                <label>
+                  QA часы
+                  <input
+                    type="number"
+                    :value="element.override_qa ?? baseHours(element.module_id).hours_qa"
+                    @change="updateHours(element, 'override_qa', $event)"
+                  />
+                </label>
+              </div>
+              <div class="grid">
+                <label>
+                  Неопределенность
+                  <select
+                    :value="element.uncertainty_level ?? store.project?.uncertainty_level"
+                    @change="updateSelect(element, 'uncertainty_level', $event)"
+                  >
+                    <option value="known">Делали 100 раз</option>
+                    <option value="new_tech">Новая технология</option>
+                  </select>
+                </label>
+                <label>
+                  UI/UX
+                  <select
+                    :value="element.uiux_level ?? store.project?.uiux_level"
+                    @change="updateSelect(element, 'uiux_level', $event)"
+                  >
+                    <option value="mvp">MVP / Bootstrap</option>
+                    <option value="award">Award Winning</option>
+                  </select>
+                </label>
+                <label class="checkbox">
+                  <input
+                    type="checkbox"
+                    :checked="element.legacy_code ?? store.project?.legacy_code"
+                    @change="updateCheckbox(element, 'legacy_code', $event)"
+                  />
+                  Legacy code
+                </label>
+              </div>
+              <div class="grid">
+                <label>
+                  FE роль
+                  <select
+                    :value="assignmentLevel(element.id, 'frontend')"
+                    @change="assignRole(element.id, 'frontend', $event)"
+                  >
+                    <option value="junior">Junior</option>
+                    <option value="middle">Middle</option>
+                    <option value="senior">Senior</option>
+                  </select>
+                </label>
+                <label>
+                  BE роль
+                  <select
+                    :value="assignmentLevel(element.id, 'backend')"
+                    @change="assignRole(element.id, 'backend', $event)"
+                  >
+                    <option value="junior">Junior</option>
+                    <option value="middle">Middle</option>
+                    <option value="senior">Senior</option>
+                  </select>
+                </label>
+                <label>
+                  QA роль
+                  <select
+                    :value="assignmentLevel(element.id, 'qa')"
+                    @change="assignRole(element.id, 'qa', $event)"
+                  >
+                    <option value="junior">Junior</option>
+                    <option value="middle">Middle</option>
+                    <option value="senior">Senior</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div v-if="store.projectModules.length === 0" class="empty">
+            Перетащите модули сюда
+          </div>
+        </div>
+      </template>
       <Draggable
+        v-else
         class="canvas-nodes"
         :list="store.projectModules"
         :group="{ name: 'modules', pull: false, put: true }"
@@ -181,6 +309,8 @@ const linkMode = ref<{ active: boolean; fromId: number | null }>({
   active: false,
   fromId: null,
 });
+const mindmapMode = ref(false);
+const mindmapPositions = ref<Record<number, { x: number; y: number }>>({});
 const contextMenu = ref({
   visible: false,
   x: 0,
@@ -286,6 +416,9 @@ function setNodeRef(el: Element | null, moduleId: number) {
 
 function scheduleLineUpdate() {
   requestAnimationFrame(() => {
+    if (mindmapMode.value) {
+      buildMindmapLayout();
+    }
     updateLines();
   });
 }
@@ -336,6 +469,89 @@ function openContextMenu(event: MouseEvent, moduleId: number) {
     y: event.clientY - rect.top,
     moduleId,
   };
+}
+
+function toggleMindmap() {
+  mindmapMode.value = !mindmapMode.value;
+  nextTick(() => {
+    buildMindmapLayout();
+    updateLines();
+  });
+}
+
+function nodeStyle(moduleId: number) {
+  if (!mindmapMode.value) return {};
+  const position = mindmapPositions.value[moduleId] ?? { x: 40, y: 40 };
+  return {
+    left: `${position.x}px`,
+    top: `${position.y}px`,
+  };
+}
+
+function buildMindmapLayout() {
+  if (!canvasRef.value || !mindmapMode.value) return;
+  const rect = canvasRef.value.getBoundingClientRect();
+  const width = rect.width || 800;
+  const centerX = width / 2;
+  const levelGap = 260;
+  const rowGap = 140;
+
+  const nodes = store.projectModules.map((module) => module.id);
+  if (nodes.length === 0) {
+    mindmapPositions.value = {};
+    return;
+  }
+
+  const incoming = new Map<number, number>();
+  const children = new Map<number, number[]>();
+  nodes.forEach((id) => {
+    incoming.set(id, 0);
+    children.set(id, []);
+  });
+  connections.value.forEach((connection) => {
+    if (!children.has(connection.fromId)) return;
+    children.get(connection.fromId)?.push(connection.toId);
+    incoming.set(connection.toId, (incoming.get(connection.toId) ?? 0) + 1);
+  });
+
+  const roots = nodes.filter((id) => (incoming.get(id) ?? 0) === 0);
+  const root = roots[0] ?? nodes[0];
+
+  const positions: Record<number, { x: number; y: number }> = {};
+  const queue: Array<{ id: number; depth: number; side: number }> = [
+    { id: root, depth: 0, side: 0 },
+  ];
+  const visited = new Set<number>([root]);
+
+  positions[root] = { x: centerX - 210, y: 60 };
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current) break;
+    const childIds = children.get(current.id) ?? [];
+    childIds.forEach((childId, index) => {
+      if (visited.has(childId)) return;
+      const side = current.side === 0 ? (index % 2 === 0 ? 1 : -1) : current.side;
+      const depth = current.depth + 1;
+      const siblingIndex = Math.floor(index / 2);
+      const x = centerX + side * depth * levelGap - 210;
+      const y = 60 + siblingIndex * rowGap + depth * 20;
+      positions[childId] = { x, y };
+      visited.add(childId);
+      queue.push({ id: childId, depth, side });
+    });
+  }
+
+  let orphanOffset = Object.keys(positions).length * 0.1;
+  nodes.forEach((id, index) => {
+    if (positions[id]) return;
+    const x = 40 + (index % 3) * 280;
+    const y = 300 + orphanOffset * rowGap;
+    positions[id] = { x, y };
+    orphanOffset += 1;
+  });
+
+  mindmapPositions.value = positions;
 }
 
 function hideContextMenu() {
@@ -417,6 +633,9 @@ function removeModule() {
 }
 
 function handleResize() {
+  if (mindmapMode.value) {
+    buildMindmapLayout();
+  }
   updateLines();
 }
 
@@ -430,6 +649,9 @@ watch(
         store.projectModules.some((module) => module.id === connection.toId)
       );
     });
+    if (mindmapMode.value) {
+      buildMindmapLayout();
+    }
     updateLines();
   }
 );
@@ -459,6 +681,15 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+}
+.actions .ghost {
+  border: 1px solid #e2e8f0;
+  padding: 6px 10px;
+  border-radius: 8px;
 }
 .panel-header h2 {
   margin: 0;
@@ -507,12 +738,19 @@ onBeforeUnmount(() => {
   gap: 12px;
   min-height: 360px;
 }
+.mindmap-nodes {
+  position: relative;
+  min-height: 360px;
+}
 .module-card {
   width: min(420px, 100%);
   border: 1px solid #e2e8f0;
   border-radius: 14px;
   padding: 12px;
   background: #f8fafc;
+}
+.module-card.absolute {
+  position: absolute;
 }
 .module-header {
   display: flex;
