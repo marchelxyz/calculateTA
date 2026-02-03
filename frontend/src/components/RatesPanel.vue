@@ -1,22 +1,26 @@
 <template>
   <section class="panel">
     <h2>Матрица команды</h2>
-    <div class="table">
-      <div class="row header">
-        <span>Роль</span>
-        <span>Уровень</span>
-        <span>Ставка (₽/час)</span>
-      </div>
-      <div v-for="rate in editableRates" :key="rateKey(rate)" class="row">
-        <input v-model="rate.role" />
-        <input v-model="rate.level" />
-        <input type="number" v-model.number="rate.hourly_rate" />
-      </div>
-      <div class="row add-row">
-        <input v-model="newRate.role" placeholder="role" />
-        <input v-model="newRate.level" placeholder="level" />
-        <input type="number" v-model.number="newRate.hourly_rate" placeholder="₽/час" />
-        <button class="ghost" @click="addRate">Добавить</button>
+    <div class="table-wrap">
+      <div class="table">
+        <div class="row header">
+          <span>Роль</span>
+          <span>Уровень</span>
+          <span>Ставка (₽/час)</span>
+          <span></span>
+        </div>
+        <div v-for="rate in editableRates" :key="rateKey(rate)" class="row">
+          <input v-model="rate.role" />
+          <input v-model="rate.level" />
+          <input type="number" v-model.number="rate.hourly_rate" />
+          <button class="ghost danger" @click="removeRate(rate)">Удалить</button>
+        </div>
+        <div class="row add-row">
+          <input v-model="newRate.role" placeholder="role" />
+          <input v-model="newRate.level" placeholder="level" />
+          <input type="number" v-model.number="newRate.hourly_rate" placeholder="₽/час" />
+          <button class="ghost" @click="addRate">Добавить</button>
+        </div>
       </div>
     </div>
     <button class="primary" @click="saveRates">Сохранить ставки</button>
@@ -68,6 +72,10 @@ function rateKey(rate: RateDraft) {
   return `${rate.role}-${rate.level}`;
 }
 
+function removeRate(rate: RateDraft) {
+  editableRates.value = editableRates.value.filter((item) => item !== rate);
+}
+
 function saveRates() {
   if (!hasChanges.value) return;
   store.updateRates(editableRates.value);
@@ -76,19 +84,23 @@ function saveRates() {
 
 <style scoped>
 .panel {
-  background: white;
+  background: var(--panel-bg);
   padding: 16px;
   border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--panel-shadow);
+}
+.table-wrap {
+  overflow-x: auto;
 }
 .table {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 560px;
 }
 .row {
   display: grid;
-  grid-template-columns: 1fr 1fr 120px;
+  grid-template-columns: 1fr 1fr 120px 110px;
   gap: 8px;
   align-items: center;
   font-size: 13px;
@@ -98,17 +110,19 @@ function saveRates() {
 }
 .header {
   font-weight: 600;
-  color: #0f172a;
+  color: var(--text);
 }
 input {
   padding: 6px 8px;
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
 }
 .primary {
   margin-top: 10px;
-  background: #2563eb;
-  color: white;
+  background: var(--accent);
+  color: var(--accent-contrast);
   border: none;
   padding: 8px 14px;
   border-radius: 10px;
@@ -116,10 +130,14 @@ input {
 }
 .ghost {
   background: transparent;
-  border: 1px dashed #cbd5f5;
-  color: #1d4ed8;
+  border: 1px dashed var(--border);
+  color: var(--accent);
   padding: 6px 10px;
   border-radius: 8px;
   cursor: pointer;
+}
+.ghost.danger {
+  border-style: solid;
+  color: var(--danger);
 }
 </style>

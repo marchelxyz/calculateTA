@@ -50,10 +50,10 @@ function formatNumber(value: number) {
 
 <style scoped>
 .panel {
-  background: white;
+  background: var(--panel-bg);
   padding: 16px;
   border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--panel-shadow);
 }
 .summary {
   display: flex;
@@ -66,7 +66,7 @@ function formatNumber(value: number) {
   gap: 8px;
 }
 .totals div {
-  background: #f8fafc;
+  background: var(--card-bg);
   padding: 10px;
   border-radius: 10px;
   display: flex;
@@ -80,7 +80,7 @@ function formatNumber(value: number) {
   gap: 8px;
 }
 .scenario {
-  background: #f8fafc;
+  background: var(--card-bg);
   padding: 10px;
   border-radius: 10px;
   display: flex;
@@ -89,7 +89,7 @@ function formatNumber(value: number) {
   font-size: 12px;
 }
 .empty {
-  color: #94a3b8;
+  color: var(--muted-2);
   font-size: 12px;
 }
 </style>

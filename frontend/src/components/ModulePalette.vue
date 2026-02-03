@@ -18,13 +18,35 @@
     </Draggable>
     <div class="creator">
       <h3>Новый модуль</h3>
+      <p class="creator-hint">
+        Часы — это базовая оценка трудозатрат по ролям (FE/BE/QA).
+        Эти значения участвуют в расчете стоимости и сроков.
+      </p>
       <div class="creator-grid">
-        <input v-model="draft.name" placeholder="Название" />
-        <input v-model="draft.code" placeholder="Код (optional)" />
-        <input v-model="draft.description" placeholder="Описание" />
-        <input type="number" v-model.number="draft.hours_frontend" placeholder="FE часы" />
-        <input type="number" v-model.number="draft.hours_backend" placeholder="BE часы" />
-        <input type="number" v-model.number="draft.hours_qa" placeholder="QA часы" />
+        <label>
+          Название
+          <input v-model="draft.name" placeholder="Например: Личный кабинет" />
+        </label>
+        <label>
+          Код
+          <input v-model="draft.code" placeholder="autofill если пусто" />
+        </label>
+        <label class="wide">
+          Описание
+          <input v-model="draft.description" placeholder="Кратко: что входит" />
+        </label>
+        <label>
+          FE часы
+          <input type="number" v-model.number="draft.hours_frontend" placeholder="8" />
+        </label>
+        <label>
+          BE часы
+          <input type="number" v-model.number="draft.hours_backend" placeholder="12" />
+        </label>
+        <label>
+          QA часы
+          <input type="number" v-model.number="draft.hours_qa" placeholder="4" />
+        </label>
       </div>
       <button class="primary" @click="createModule">Добавить модуль</button>
     </div>
@@ -83,14 +105,14 @@ function slugify(value: string) {
 
 <style scoped>
 .panel {
-  background: white;
+  background: var(--panel-bg);
   padding: 16px;
   border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--panel-shadow);
 }
 .hint {
   margin-top: 0;
-  color: #64748b;
+  color: var(--muted);
   font-size: 14px;
 }
 .list {
@@ -100,10 +122,10 @@ function slugify(value: string) {
 }
 .card {
   padding: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   border-radius: 12px;
   cursor: pointer;
-  background: #f8fafc;
+  background: var(--card-bg);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -113,7 +135,7 @@ function slugify(value: string) {
 }
 .card span {
   font-size: 12px;
-  color: #64748b;
+  color: var(--muted);
 }
 .creator {
   margin-top: 16px;
@@ -124,20 +146,37 @@ function slugify(value: string) {
   margin: 0 0 8px;
   font-size: 14px;
 }
+.creator-hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
 .creator-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 8px;
 }
+.creator-grid label {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.creator-grid .wide {
+  grid-column: span 2;
+}
 .creator-grid input {
   padding: 6px 8px;
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
 }
 .primary {
   margin-top: 10px;
-  background: #2563eb;
-  color: white;
+  background: var(--accent);
+  color: var(--accent-contrast);
   border: none;
   padding: 8px 14px;
   border-radius: 10px;
