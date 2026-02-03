@@ -54,15 +54,15 @@ def _parse_with_openai(
     """Request OpenAI WBS decomposition."""
     client = OpenAI(api_key=settings.openai_api_key)
     system_prompt = _build_system_prompt(catalog)
-    response = client.responses.create(
+    response = client.chat.completions.create(
         model=settings.openai_model,
-        input=[
+        messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt},
         ],
         timeout=settings.openai_timeout_seconds,
     )
-    content = response.output_text
+    content = response.choices[0].message.content or ""
     data = _safe_json_loads(content)
     tasks = _parse_tasks(data.get("tasks", []), catalog_index)
     suggestions = _parse_suggestions(data.get("suggestions", []), catalog_index)
