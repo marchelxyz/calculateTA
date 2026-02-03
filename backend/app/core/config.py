@@ -44,6 +44,15 @@ class Settings(BaseSettings):
 
         return _normalize_database_url(value)
 
+    @field_validator("openai_api_key")
+    @classmethod
+    def _normalize_openai_api_key(cls, value: str | None) -> str | None:
+        """Strip whitespace from OpenAI API key."""
+
+        if not value:
+            return value
+        return value.strip()
+
 
 def get_settings() -> Settings:
     """Return cached settings instance."""
