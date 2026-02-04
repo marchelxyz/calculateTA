@@ -16,7 +16,7 @@
             Описание
             <input v-model="drafts[module.id].description" />
           </label>
-          <div class="hours">
+        <div class="hours">
             <label>
               FE
               <input type="number" v-model.number="drafts[module.id].hours_frontend" />
@@ -29,6 +29,10 @@
               QA
               <input type="number" v-model.number="drafts[module.id].hours_qa" />
             </label>
+          <label v-for="role in extraRoles" :key="`${module.id}-${role}`">
+            {{ role }}
+            <input type="number" v-model.number="drafts[module.id].role_hours[role]" />
+          </label>
           </div>
         </div>
         <div class="card-actions">
@@ -90,6 +94,7 @@ const drafts = reactive<Record<number, {
   hours_frontend: number;
   hours_backend: number;
   hours_qa: number;
+  role_hours: Record<string, number>;
 }>>({});
 const draft = ref({
   code: "",
@@ -122,7 +127,24 @@ watch(
         hours_frontend: module.hours_frontend,
         hours_backend: module.hours_backend,
         hours_qa: module.hours_qa,
+        role_hours: buildRoleHoursDraft(module.role_hours),
       };
+    });
+  },
+  { immediate: true }
+);
+
+watch(
+  () => extraRoles.value,
+  (roles) => {
+    store.modules.forEach((module) => {
+      const draft = drafts[module.id];
+      if (!draft) return;
+      roles.forEach((role) => {
+        if (draft.role_hours[role] === undefined) {
+          draft.role_hours[role] = 0;
+        }
+      });
     });
   },
   { immediate: true }
@@ -182,6 +204,7 @@ async function saveModule(moduleId: number) {
     hours_frontend: Number(draft.hours_frontend) || 0,
     hours_backend: Number(draft.hours_backend) || 0,
     hours_qa: Number(draft.hours_qa) || 0,
+    role_hours: buildRoleHoursPayload(draft.role_hours),
   });
 }
 
@@ -191,6 +214,26 @@ function slugify(value: string) {
     .replace(/[^a-z0-9а-яё]+/gi, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 32);
+}
+
+function buildRoleHoursDraft(
+  roleHours: Array<{ role: string; hours: number }> | undefined
+) {
+  const draft: Record<string, number> = {};
+  if (!roleHours) return draft;
+  roleHours.forEach((item) => {
+    draft[item.role] = item.hours;
+  });
+  return draft;
+}
+
+function buildRoleHoursPayload(roleHours: Record<string, number>) {
+  return Object.entries(roleHours)
+    .map(([role, hours]) => ({
+      role,
+      hours: Number(hours) || 0,
+    }))
+    .filter((item) => item.hours > 0);
 }
 </script>
 
