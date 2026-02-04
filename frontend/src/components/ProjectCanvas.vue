@@ -38,6 +38,11 @@
           <button class="ghost" @click="exportMindmapPng">PNG</button>
           <button class="ghost" @click="exportMindmapPdf">PDF</button>
           <button class="ghost" @click="exportMindmapBundle">PNG + PDF</button>
+          <input
+            v-model="mindmapSearch"
+            class="mindmap-input"
+            placeholder="Поиск по узлам"
+          />
           <select v-model="compareVersionId" class="mindmap-select">
             <option value="">Сравнить с версией</option>
             <option v-for="version in store.mindmapVersions" :key="version.id" :value="String(version.id)">
@@ -95,7 +100,7 @@
               </div>
             </div>
             <div
-              v-for="node in store.mindmapNodes"
+              v-for="node in filteredMindmapNodes"
               :key="node.id"
               class="module-card absolute"
               :ref="(el) => setNodeRef(el, node.id)"
@@ -106,7 +111,7 @@
             >
               <header
                 class="module-header drag-handle"
-                @mousedown.stop="startNodeDrag($event, node.id)"
+                @mousedown.stop.prevent="startNodeDrag($event, node.id)"
               >
                 <div>
                   <strong>{{ node.title }}</strong>
@@ -197,7 +202,7 @@
               :key="note.id"
               class="note"
               :style="noteStyle(note)"
-              @mousedown.stop="startNoteDrag($event, note.id)"
+              @mousedown.stop.prevent="startNoteDrag($event, note.id)"
             >
               <textarea
                 :value="note.content"
@@ -208,6 +213,9 @@
             </div>
             <div v-if="store.mindmapNodes.length === 0" class="empty">
               Сгенерируйте схему или добавьте узел вручную
+            </div>
+            <div v-else-if="filteredMindmapNodes.length === 0" class="empty">
+              Ничего не найдено по поиску
             </div>
           </div>
         </template>
@@ -388,6 +396,7 @@ const autoLayoutEnabled = ref(true);
 const versionTitle = ref("");
 const selectedVersionId = ref("");
 const compareVersionId = ref("");
+const mindmapSearch = ref("");
 const compareActive = ref(false);
 const compareDiff = ref<{ added: Set<number>; changed: Set<number>; removed: number }>({
   added: new Set(),
@@ -498,6 +507,18 @@ const compareSummary = computed(() => ({
   removed: compareDiff.value.removed,
 }));
 
+const filteredMindmapNodes = computed(() => {
+  const query = mindmapSearch.value.trim().toLowerCase();
+  if (!query) return store.mindmapNodes;
+  return store.mindmapNodes.filter((node) => {
+    const moduleNameValue = node.module_id ? moduleName(node.module_id) : "";
+    return [node.title, node.description, moduleNameValue]
+      .join(" ")
+      .toLowerCase()
+      .includes(query);
+  });
+});
+
 function baseHours(moduleId: number) {
   return (
     moduleMap.value.get(moduleId) ?? {
@@ -561,6 +582,15 @@ async function addMindmapNote() {
     position_x: rect.width / 2 - 80,
     position_y: rect.height / 2 - 40,
   });
+}
+
+function toCanvasPoint(event: MouseEvent) {
+  if (!canvasRef.value) return { x: 0, y: 0 };
+  const rect = canvasRef.value.getBoundingClientRect();
+  const scale = zoom.value || 1;
+  const x = (event.clientX - rect.left + canvasRef.value.scrollLeft) / scale;
+  const y = (event.clientY - rect.top + canvasRef.value.scrollTop) / scale;
+  return { x, y };
 }
 
 function autoLayoutMindmap() {
@@ -1229,23 +1259,23 @@ function startNodeDrag(event: MouseEvent, nodeId: number) {
   const node = store.mindmapNodes.find((item) => item.id === nodeId);
   if (!node) return;
   autoLayoutEnabled.value = false;
-  const rect = canvasRef.value.getBoundingClientRect();
+  const point = toCanvasPoint(event);
   draggingNode.value = {
     id: nodeId,
-    offsetX: event.clientX - rect.left - node.position_x,
-    offsetY: event.clientY - rect.top - node.position_y,
+    offsetX: point.x - node.position_x,
+    offsetY: point.y - node.position_y,
   };
   window.addEventListener("mousemove", handleNodeDrag);
   window.addEventListener("mouseup", stopNodeDrag);
 }
 
 function handleNodeDrag(event: MouseEvent) {
-  if (!canvasRef.value || !draggingNode.value) return;
-  const rect = canvasRef.value.getBoundingClientRect();
+  if (!draggingNode.value) return;
   const node = store.mindmapNodes.find((item) => item.id === draggingNode.value?.id);
   if (!node) return;
-  const position_x = event.clientX - rect.left - draggingNode.value.offsetX;
-  const position_y = event.clientY - rect.top - draggingNode.value.offsetY;
+  const point = toCanvasPoint(event);
+  const position_x = point.x - draggingNode.value.offsetX;
+  const position_y = point.y - draggingNode.value.offsetY;
   const updated = { ...node, position_x, position_y };
   updateNodeLocal(updated);
   scheduleNodeSave(updated);
@@ -1262,23 +1292,23 @@ function startNoteDrag(event: MouseEvent, noteId: number) {
   if (!canvasRef.value) return;
   const note = store.mindmapNotes.find((item) => item.id === noteId);
   if (!note) return;
-  const rect = canvasRef.value.getBoundingClientRect();
+  const point = toCanvasPoint(event);
   draggingNote.value = {
     id: noteId,
-    offsetX: event.clientX - rect.left - note.position_x,
-    offsetY: event.clientY - rect.top - note.position_y,
+    offsetX: point.x - note.position_x,
+    offsetY: point.y - note.position_y,
   };
   window.addEventListener("mousemove", handleNoteDrag);
   window.addEventListener("mouseup", stopNoteDrag);
 }
 
 function handleNoteDrag(event: MouseEvent) {
-  if (!canvasRef.value || !draggingNote.value) return;
-  const rect = canvasRef.value.getBoundingClientRect();
+  if (!draggingNote.value) return;
   const note = store.mindmapNotes.find((item) => item.id === draggingNote.value?.id);
   if (!note) return;
-  const position_x = event.clientX - rect.left - draggingNote.value.offsetX;
-  const position_y = event.clientY - rect.top - draggingNote.value.offsetY;
+  const point = toCanvasPoint(event);
+  const position_x = point.x - draggingNote.value.offsetX;
+  const position_y = point.y - draggingNote.value.offsetY;
   const updated = { ...note, position_x, position_y };
   store.mindmapNotes = store.mindmapNotes.map((item) =>
     item.id === note.id ? updated : item
