@@ -19,7 +19,13 @@
           <button class="ghost" @click="buildAiMindmap">AI-схема</button>
           <button class="ghost" @click="addMindmapNode">Добавить узел</button>
           <button class="ghost" @click="addMindmapNote">Комментарий</button>
-          <button class="ghost" @click="autoLayoutMindmap">Авто-раскладка (XMind)</button>
+          <button
+            class="ghost"
+            title="Автоматически раскладывает узлы по уровням"
+            @click="autoLayoutMindmap"
+          >
+            Авто-раскладка (XMind)
+          </button>
           <input
             v-model="versionTitle"
             class="mindmap-input"
@@ -41,7 +47,7 @@
           <input
             v-model="mindmapSearch"
             class="mindmap-input"
-            placeholder="Поиск по узлам"
+            placeholder="Поиск модулей/узлов"
           />
           <select v-model="compareVersionId" class="mindmap-select">
             <option value="">Сравнить с версией</option>
@@ -70,7 +76,13 @@
         </button>
       </div>
     </div>
-    <div class="canvas-surface" ref="canvasRef" @click="hideContextMenu">
+    <div
+      class="canvas-surface"
+      ref="canvasRef"
+      @click="hideContextMenu"
+      @dragover.prevent="handleCanvasDragOver"
+      @drop="handleCanvasDrop"
+    >
       <div class="canvas-zoom" :style="zoomStyle">
         <svg v-if="lines.length" class="canvas-lines">
           <path
@@ -85,11 +97,12 @@
               <div class="legend-title">Модули</div>
               <div class="legend-items">
                 <span
-                  v-for="module in store.modules"
+                  v-for="module in filteredLegendModules"
                   :key="module.id"
                   class="legend-item"
                   :style="moduleBadgeStyle(module.id)"
-                  @mousedown.stop.prevent="startLegendNode(module.id, $event)"
+                  draggable="true"
+                  @dragstart="startLegendDrag(module.id, $event)"
                 >
                   {{ module.name }}
                 </span>
@@ -520,6 +533,17 @@ const filteredMindmapNodes = computed(() => {
   });
 });
 
+const filteredLegendModules = computed(() => {
+  const query = mindmapSearch.value.trim().toLowerCase();
+  if (!query) return store.modules;
+  return store.modules.filter((module) =>
+    [module.name, module.code, module.description]
+      .join(" ")
+      .toLowerCase()
+      .includes(query)
+  );
+});
+
 function baseHours(moduleId: number) {
   return (
     moduleMap.value.get(moduleId) ?? {
@@ -591,11 +615,55 @@ async function addMindmapNote() {
   });
 }
 
-async function startLegendNode(moduleId: number, event: MouseEvent) {
+function startLegendDrag(moduleId: number, event: DragEvent) {
+  if (!event.dataTransfer) return;
+  event.dataTransfer.setData("text/plain", `module:${moduleId}`);
+  event.dataTransfer.effectAllowed = "copy";
+}
+
+async function handleCanvasDragOver(event: DragEvent) {
+  if (!mindmapMode.value) return;
+  event.preventDefault();
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = "copy";
+  }
+}
+
+async function handleCanvasDrop(event: DragEvent) {
+  if (!mindmapMode.value) return;
+  event.preventDefault();
+  const raw = event.dataTransfer?.getData("text/plain") ?? "";
+  if (!raw.startsWith("module:")) return;
+  const moduleId = Number(raw.replace("module:", ""));
   const module = store.modules.find((item) => item.id === moduleId);
   if (!module) return;
   const point = toCanvasPoint(event);
-  const created = await store.createMindmapNode({
+  await createNodeFromModule(module, point.x, point.y);
+}
+
+function toCanvasPoint(event: { clientX: number; clientY: number }) {
+  if (!canvasRef.value) return { x: 0, y: 0 };
+  const rect = canvasRef.value.getBoundingClientRect();
+  const scale = zoom.value || 1;
+  const x = (event.clientX - rect.left + canvasRef.value.scrollLeft) / scale;
+  const y = (event.clientY - rect.top + canvasRef.value.scrollTop) / scale;
+  return { x, y };
+}
+
+async function createNodeFromModule(
+  module: {
+    id: number;
+    name: string;
+    description: string;
+    hours_frontend: number;
+    hours_backend: number;
+    hours_qa: number;
+    role_hours?: Array<{ role: string; hours: number }>;
+  },
+  x: number,
+  y: number
+) {
+  return store.createMindmapNode({
     title: module.name,
     description: module.description,
     module_id: module.id,
@@ -606,21 +674,10 @@ async function startLegendNode(moduleId: number, event: MouseEvent) {
     uncertainty_level: null,
     uiux_level: null,
     legacy_code: null,
-    position_x: point.x - 120,
-    position_y: point.y - 80,
+    position_x: x - 120,
+    position_y: y - 80,
     role_hours: module.role_hours ?? [],
   });
-  if (!created) return;
-  startNodeDrag(event, created.id);
-}
-
-function toCanvasPoint(event: MouseEvent) {
-  if (!canvasRef.value) return { x: 0, y: 0 };
-  const rect = canvasRef.value.getBoundingClientRect();
-  const scale = zoom.value || 1;
-  const x = (event.clientX - rect.left + canvasRef.value.scrollLeft) / scale;
-  const y = (event.clientY - rect.top + canvasRef.value.scrollTop) / scale;
-  return { x, y };
 }
 
 function autoLayoutMindmap() {
