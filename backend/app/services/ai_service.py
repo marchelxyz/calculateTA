@@ -111,27 +111,23 @@ def _parse_with_openai(
     client = OpenAI(api_key=settings.openai_api_key)
     system_prompt = _build_system_prompt(catalog)
     try:
-        response = client.chat.completions.create(
-            model=settings.openai_model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt},
-            ],
-            timeout=settings.openai_timeout_seconds,
-        )
-        content = response.choices[0].message.content or ""
-        if not content:
-            logger.warning("OpenAI returned empty response content.")
-        data = _safe_json_loads(content)
-        tasks = _parse_tasks(data.get("tasks", []), catalog_index)
-        suggestions = _parse_suggestions(data.get("suggestions", []), catalog_index)
-        if not suggestions:
-            suggestions = _suggest_from_tasks(tasks)
-        rationale = data.get("rationale", "AI analysis")
-        return AiParseResponse(suggestions=suggestions, tasks=tasks, rationale=rationale)
-    except Exception:
-        logger.exception("OpenAI request failed. Falling back to heuristics.")
-        return _parse_with_heuristics(prompt, catalog, catalog_index)
+        content = _request_openai_chat(client, system_prompt, prompt)
+    except Exception as exc:
+        if _is_non_chat_model_error(exc):
+            logger.warning("OpenAI model is not chat-capable. Retrying with completions API.")
+            content = _request_openai_completion(client, system_prompt, prompt)
+        else:
+            logger.exception("OpenAI request failed. Falling back to heuristics.")
+            return _parse_with_heuristics(prompt, catalog, catalog_index)
+    if not content:
+        logger.warning("OpenAI returned empty response content.")
+    data = _safe_json_loads(content or "")
+    tasks = _parse_tasks(data.get("tasks", []), catalog_index)
+    suggestions = _parse_suggestions(data.get("suggestions", []), catalog_index)
+    if not suggestions:
+        suggestions = _suggest_from_tasks(tasks)
+    rationale = data.get("rationale", "AI analysis")
+    return AiParseResponse(suggestions=suggestions, tasks=tasks, rationale=rationale)
 
 
 def _build_system_prompt(catalog: list[ModuleCatalogItem]) -> str:
@@ -154,6 +150,41 @@ def _build_system_prompt(catalog: list[ModuleCatalogItem]) -> str:
         "Каталог:\n"
         f"{catalog_text}"
     )
+
+
+def _request_openai_chat(client: OpenAI, system_prompt: str, prompt: str) -> str:
+    """Call chat-completions API and return response content."""
+    response = client.chat.completions.create(
+        model=settings.openai_model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ],
+        timeout=settings.openai_timeout_seconds,
+    )
+    return response.choices[0].message.content or ""
+
+
+def _request_openai_completion(client: OpenAI, system_prompt: str, prompt: str) -> str:
+    """Call completions API for non-chat models."""
+    combined_prompt = (
+        f"{system_prompt}\n\n"
+        "Запрос пользователя:\n"
+        f"{prompt}\n\n"
+        "Ответь строго в JSON как в инструкции выше."
+    )
+    response = client.completions.create(
+        model=settings.openai_model,
+        prompt=combined_prompt,
+        timeout=settings.openai_timeout_seconds,
+    )
+    return response.choices[0].text or ""
+
+
+def _is_non_chat_model_error(error: Exception) -> bool:
+    """Detect when a non-chat model is used with chat-completions."""
+    message = str(error).lower()
+    return "not a chat model" in message or "chat/completions" in message
 
 
 def _parse_with_heuristics(
