@@ -81,9 +81,14 @@
       ref="canvasRef"
       @click="hideContextMenu"
       @dragover.prevent="handleCanvasDragOver"
-      @drop="handleCanvasDrop"
+      @drop.prevent="handleCanvasDrop"
     >
-      <div class="canvas-zoom" :style="zoomStyle">
+      <div
+        class="canvas-zoom"
+        :style="zoomStyle"
+        @dragover.prevent="handleCanvasDragOver"
+        @drop.prevent="handleCanvasDrop"
+      >
         <svg v-if="lines.length" class="canvas-lines">
           <path
             v-for="(line, index) in lines"
@@ -103,6 +108,7 @@
                   :style="moduleBadgeStyle(module.id)"
                   draggable="true"
                   @dragstart="startLegendDrag(module.id, $event)"
+                  @dragend="finishLegendDrag"
                 >
                   {{ module.name }}
                 </span>
@@ -417,6 +423,9 @@ const compareDiff = ref<{ added: Set<number>; changed: Set<number>; removed: num
   changed: new Set(),
   removed: 0,
 });
+const draggingLegendModuleId = ref<number | null>(null);
+const lastLegendDropPoint = ref<{ x: number; y: number } | null>(null);
+const dropHandled = ref(false);
 const contextMenu = ref({
   visible: false,
   x: 0,
@@ -619,6 +628,9 @@ function startLegendDrag(moduleId: number, event: DragEvent) {
   if (!event.dataTransfer) return;
   event.dataTransfer.setData("text/plain", `module:${moduleId}`);
   event.dataTransfer.effectAllowed = "copy";
+  draggingLegendModuleId.value = moduleId;
+  lastLegendDropPoint.value = null;
+  dropHandled.value = false;
 }
 
 async function handleCanvasDragOver(event: DragEvent) {
@@ -627,18 +639,41 @@ async function handleCanvasDragOver(event: DragEvent) {
   if (event.dataTransfer) {
     event.dataTransfer.dropEffect = "copy";
   }
+  lastLegendDropPoint.value = toCanvasPoint(event);
 }
 
 async function handleCanvasDrop(event: DragEvent) {
   if (!mindmapMode.value) return;
   event.preventDefault();
   const raw = event.dataTransfer?.getData("text/plain") ?? "";
-  if (!raw.startsWith("module:")) return;
-  const moduleId = Number(raw.replace("module:", ""));
+  const moduleId =
+    raw.startsWith("module:") ? Number(raw.replace("module:", "")) : draggingLegendModuleId.value;
+  if (!moduleId) return;
   const module = store.modules.find((item) => item.id === moduleId);
   if (!module) return;
   const point = toCanvasPoint(event);
+  autoLayoutEnabled.value = false;
   await createNodeFromModule(module, point.x, point.y);
+  dropHandled.value = true;
+  draggingLegendModuleId.value = null;
+}
+
+async function finishLegendDrag() {
+  if (!mindmapMode.value) return;
+  if (dropHandled.value) {
+    dropHandled.value = false;
+    return;
+  }
+  if (!draggingLegendModuleId.value || !lastLegendDropPoint.value) return;
+  const module = store.modules.find((item) => item.id === draggingLegendModuleId.value);
+  if (!module) return;
+  autoLayoutEnabled.value = false;
+  await createNodeFromModule(
+    module,
+    lastLegendDropPoint.value.x,
+    lastLegendDropPoint.value.y
+  );
+  draggingLegendModuleId.value = null;
 }
 
 function toCanvasPoint(event: { clientX: number; clientY: number }) {
