@@ -119,123 +119,113 @@
                 <span class="legend-chip removed">Удалено: {{ compareSummary.removed }}</span>
               </div>
             </div>
-            <div
-              v-for="node in filteredMindmapNodes"
-              :key="node.id"
-              class="module-card absolute"
-              :ref="(el) => setNodeRef(el, node.id)"
-              :style="nodeCardStyle(node)"
-              :class="compareClass(node)"
-              @contextmenu="openContextMenu($event, node.id)"
-              @click.stop="handleNodeClick(node.id)"
-            >
-              <header
-                class="module-header drag-handle"
-                @mousedown.stop.prevent="startNodeDrag($event, node.id)"
-              >
-                <div>
-                  <strong>{{ node.title }}</strong>
-                  <small
-                    v-if="node.module_id"
-                    class="module-badge"
-                    :style="moduleBadgeStyle(node.module_id)"
-                  >
-                    {{ moduleName(node.module_id) }}
-                  </small>
+            <div class="mindmap-content">
+              <div class="mindmap-stage">
+                <div ref="mindmapContainerRef" class="mindmap-container"></div>
+                <div
+                  v-for="note in store.mindmapNotes"
+                  :key="note.id"
+                  class="note"
+                  :style="noteStyle(note)"
+                  @mousedown.stop.prevent="startNoteDrag($event, note.id)"
+                >
+                  <textarea
+                    :value="note.content"
+                    @input="updateNoteContent(note, $event)"
+                    @mousedown.stop
+                  ></textarea>
+                  <button class="note-remove" @click="removeMindmapNote(note.id)">×</button>
                 </div>
-                <span v-if="linkMode.fromId === node.id" class="link-badge">
-                  Источник связи
-                </span>
-                <button class="ghost danger" @click="removeMindmapNode(node.id)">
-                  Удалить
-                </button>
-              </header>
-              <div class="module-body">
-                <div class="grid">
-                  <label class="wide">
-                    Название
-                    <input
-                      :value="node.title"
-                      @input="updateNodeField(node, 'title', $event)"
-                    />
-                  </label>
-                  <label class="wide">
-                    Описание
-                    <input
-                      :value="node.description"
-                      @input="updateNodeField(node, 'description', $event)"
-                    />
-                  </label>
-                  <label class="wide">
-                    Модуль
-                    <select
-                      :value="node.module_id ?? ''"
-                      @change="updateNodeModule(node, $event)"
-                    >
-                      <option value="">Без привязки</option>
-                      <option v-for="module in store.modules" :key="module.id" :value="module.id">
-                        {{ module.name }}
-                      </option>
-                    </select>
-                  </label>
-                </div>
-                <div class="grid">
-                  <label>
-                    FE часы
-                    <input
-                      type="number"
-                      :value="node.hours_frontend"
-                      @change="updateNodeField(node, 'hours_frontend', $event)"
-                    />
-                  </label>
-                  <label>
-                    BE часы
-                    <input
-                      type="number"
-                      :value="node.hours_backend"
-                      @change="updateNodeField(node, 'hours_backend', $event)"
-                    />
-                  </label>
-                  <label>
-                    QA часы
-                    <input
-                      type="number"
-                      :value="node.hours_qa"
-                      @change="updateNodeField(node, 'hours_qa', $event)"
-                    />
-                  </label>
-                </div>
-                <div class="grid">
-                  <label v-for="role in extraRoles" :key="role">
-                    {{ role }} часы
-                    <input
-                      type="number"
-                      :value="roleHoursValue(node, role)"
-                      @change="updateNodeRoleHours(node, role, $event)"
-                    />
-                  </label>
+                <div v-if="store.mindmapNodes.length === 0" class="empty">
+                  Сгенерируйте схему или добавьте узел вручную
                 </div>
               </div>
-            </div>
-            <div
-              v-for="note in store.mindmapNotes"
-              :key="note.id"
-              class="note"
-              :style="noteStyle(note)"
-              @mousedown.stop.prevent="startNoteDrag($event, note.id)"
-            >
-              <textarea
-                :value="note.content"
-                @input="updateNoteContent(note, $event)"
-                @mousedown.stop
-              ></textarea>
-              <button class="note-remove" @click="removeMindmapNote(note.id)">×</button>
-            </div>
-            <div v-if="store.mindmapNodes.length === 0" class="empty">
-              Сгенерируйте схему или добавьте узел вручную
-            </div>
-            <div v-else-if="filteredMindmapNodes.length === 0" class="empty">
-              Ничего не найдено по поиску
+              <div class="mindmap-editor">
+                <div v-if="selectedMindmapNode" class="module-card" :class="compareClass(selectedMindmapNode)">
+                  <header class="module-header">
+                    <div>
+                      <strong>{{ selectedMindmapNode.title }}</strong>
+                      <small
+                        v-if="selectedMindmapNode.module_id"
+                        class="module-badge"
+                        :style="moduleBadgeStyle(selectedMindmapNode.module_id)"
+                      >
+                        {{ moduleName(selectedMindmapNode.module_id) }}
+                      </small>
+                    </div>
+                    <button class="ghost danger" @click="removeMindmapNode(selectedMindmapNode.id)">
+                      Удалить
+                    </button>
+                  </header>
+                  <div class="module-body">
+                    <div class="grid">
+                      <label class="wide">
+                        Название
+                        <input
+                          :value="selectedMindmapNode.title"
+                          @input="updateNodeField(selectedMindmapNode, 'title', $event)"
+                        />
+                      </label>
+                      <label class="wide">
+                        Описание
+                        <input
+                          :value="selectedMindmapNode.description"
+                          @input="updateNodeField(selectedMindmapNode, 'description', $event)"
+                        />
+                      </label>
+                      <label class="wide">
+                        Модуль
+                        <select
+                          :value="selectedMindmapNode.module_id ?? ''"
+                          @change="updateNodeModule(selectedMindmapNode, $event)"
+                        >
+                          <option value="">Без привязки</option>
+                          <option v-for="module in store.modules" :key="module.id" :value="module.id">
+                            {{ module.name }}
+                          </option>
+                        </select>
+                      </label>
+                    </div>
+                    <div class="grid">
+                      <label>
+                        FE часы
+                        <input
+                          type="number"
+                          :value="selectedMindmapNode.hours_frontend"
+                          @change="updateNodeField(selectedMindmapNode, 'hours_frontend', $event)"
+                        />
+                      </label>
+                      <label>
+                        BE часы
+                        <input
+                          type="number"
+                          :value="selectedMindmapNode.hours_backend"
+                          @change="updateNodeField(selectedMindmapNode, 'hours_backend', $event)"
+                        />
+                      </label>
+                      <label>
+                        QA часы
+                        <input
+                          type="number"
+                          :value="selectedMindmapNode.hours_qa"
+                          @change="updateNodeField(selectedMindmapNode, 'hours_qa', $event)"
+                        />
+                      </label>
+                    </div>
+                    <div class="grid">
+                      <label v-for="role in extraRoles" :key="role">
+                        {{ role }} часы
+                        <input
+                          type="number"
+                          :value="roleHoursValue(selectedMindmapNode, role)"
+                          @change="updateNodeRoleHours(selectedMindmapNode, role, $event)"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="empty">Выберите узел для редактирования</div>
+              </div>
             </div>
           </div>
         </template>
@@ -394,25 +384,40 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { toPng } from "html-to-image";
 import { jsPDF } from "jspdf";
+import MindMap from "simple-mind-map/full";
+import "simple-mind-map/dist/simpleMindMap.esm.min.css";
 import { VueDraggableNext as Draggable } from "vue-draggable-next";
 import { useProjectStore } from "../stores/project";
 import type { ProjectConnection, ProjectModule, ProjectNode, ProjectNote } from "../types";
 
+type MindmapNodeData = {
+  text: string;
+  uid: string;
+  customLeft?: number;
+  customTop?: number;
+};
+
+type MindmapTreeNode = {
+  data: MindmapNodeData;
+  children: MindmapTreeNode[];
+};
+
 const store = useProjectStore();
 const canvasRef = ref<HTMLElement | null>(null);
+const mindmapContainerRef = ref<HTMLDivElement | null>(null);
 const lines = ref<{ x1: number; y1: number; x2: number; y2: number }[]>([]);
 const nodeRefs = ref<Record<number, HTMLElement>>({});
 const moduleConnections = ref<{ fromId: number; toId: number }[]>([]);
-const mindmapConnections = ref<{ fromId: number; toId: number }[]>([]);
+const mindmapInstance = ref<InstanceType<typeof MindMap> | null>(null);
 const linkMode = ref<{ active: boolean; fromId: number | null }>({
   active: false,
   fromId: null,
 });
 const mindmapMode = ref(false);
-const mindmapPositions = ref<Record<number, { x: number; y: number }>>({});
+const useCustomPositions = ref(true);
 const zoom = ref(1);
+const freeZoomCache = ref(1);
 const mindmapPrompt = ref("");
-const autoLayoutEnabled = ref(true);
 const versionTitle = ref("");
 const selectedVersionId = ref("");
 const compareVersionId = ref("");
@@ -426,13 +431,14 @@ const compareDiff = ref<{ added: Set<number>; changed: Set<number>; removed: num
 const draggingLegendModuleId = ref<number | null>(null);
 const lastLegendDropPoint = ref<{ x: number; y: number } | null>(null);
 const dropHandled = ref(false);
+const selectedMindmapNodeId = ref<number | null>(null);
+const lastDraggedMindmapNode = ref<any | null>(null);
 const contextMenu = ref({
   visible: false,
   x: 0,
   y: 0,
   moduleId: null as number | null,
 });
-const draggingNode = ref<{ id: number; offsetX: number; offsetY: number } | null>(null);
 const draggingNote = ref<{ id: number; offsetX: number; offsetY: number } | null>(null);
 const nodeSaveTimers = new Map<number, number>();
 const noteSaveTimers = new Map<number, number>();
@@ -451,7 +457,13 @@ const moduleMap = computed(() => {
 });
 
 const connections = computed(() => {
-  return mindmapMode.value ? mindmapConnections.value : moduleConnections.value;
+  if (mindmapMode.value) {
+    return store.mindmapConnections.map((item) => ({
+      fromId: item.from_node_id,
+      toId: item.to_node_id,
+    }));
+  }
+  return moduleConnections.value;
 });
 
 const extraRoles = computed(() => {
@@ -505,20 +517,6 @@ function moduleBadgeStyle(moduleId: number) {
   };
 }
 
-function nodeCardStyle(node: ProjectNode) {
-  const base = nodeStyle(node.id, node.position_x, node.position_y);
-  if (!node.module_id) {
-    return base;
-  }
-  const color = moduleColor(node.module_id);
-  return {
-    ...base,
-    borderColor: color,
-    boxShadow: `0 10px 20px ${color}22`,
-    background: `linear-gradient(135deg, ${color}14 0%, var(--card-bg) 50%)`,
-  };
-}
-
 function compareClass(node: ProjectNode) {
   if (!compareActive.value) return "";
   if (compareDiff.value.added.has(node.id)) return "node-added";
@@ -530,18 +528,6 @@ const compareSummary = computed(() => ({
   removed: compareDiff.value.removed,
 }));
 
-const filteredMindmapNodes = computed(() => {
-  const query = mindmapSearch.value.trim().toLowerCase();
-  if (!query) return store.mindmapNodes;
-  return store.mindmapNodes.filter((node) => {
-    const moduleNameValue = node.module_id ? moduleName(node.module_id) : "";
-    return [node.title, node.description, moduleNameValue]
-      .join(" ")
-      .toLowerCase()
-      .includes(query);
-  });
-});
-
 const filteredLegendModules = computed(() => {
   const query = mindmapSearch.value.trim().toLowerCase();
   if (!query) return store.modules;
@@ -551,6 +537,11 @@ const filteredLegendModules = computed(() => {
       .toLowerCase()
       .includes(query)
   );
+});
+
+const selectedMindmapNode = computed(() => {
+  if (!mindmapMode.value || selectedMindmapNodeId.value === null) return null;
+  return store.mindmapNodes.find((node) => node.id === selectedMindmapNodeId.value) ?? null;
 });
 
 function baseHours(moduleId: number) {
@@ -578,19 +569,14 @@ async function buildAiMindmap() {
   if (!mindmapPrompt.value.trim()) return;
   await store.generateMindmap(mindmapPrompt.value.trim());
   mindmapPrompt.value = "";
-  autoLayoutEnabled.value = true;
-  nextTick(() => {
-    buildMindmapLayout();
-    updateLines();
-  });
+  useCustomPositions.value = false;
+  await nextTick();
+  refreshMindmapFromStore();
+  autoLayoutMindmap();
 }
 
 async function addMindmapNode() {
-  if (!canvasRef.value) return;
-  const rect = canvasRef.value.getBoundingClientRect();
-  const scale = zoom.value || 1;
-  const centerX = (canvasRef.value.scrollLeft + rect.width / 2) / scale;
-  const centerY = (canvasRef.value.scrollTop + rect.height / 2) / scale;
+  const point = getMindmapCenter();
   const created = await store.createMindmapNode({
     title: "Новый узел",
     description: "",
@@ -602,12 +588,13 @@ async function addMindmapNode() {
     uncertainty_level: null,
     uiux_level: null,
     legacy_code: null,
-    position_x: centerX - 120,
-    position_y: centerY - 80,
+    position_x: point.x - 120,
+    position_y: point.y - 80,
     role_hours: [],
   });
   if (created) {
-    scheduleLineUpdate();
+    selectedMindmapNodeId.value = created.id;
+    refreshMindmapFromStore();
   }
 }
 
@@ -639,7 +626,7 @@ async function handleCanvasDragOver(event: DragEvent) {
   if (event.dataTransfer) {
     event.dataTransfer.dropEffect = "copy";
   }
-  lastLegendDropPoint.value = toCanvasPoint(event);
+  lastLegendDropPoint.value = getDropPoint(event);
 }
 
 async function handleCanvasDrop(event: DragEvent) {
@@ -651,8 +638,8 @@ async function handleCanvasDrop(event: DragEvent) {
   if (!moduleId) return;
   const module = store.modules.find((item) => item.id === moduleId);
   if (!module) return;
-  const point = toCanvasPoint(event);
-  autoLayoutEnabled.value = false;
+  const point = getDropPoint(event);
+  useCustomPositions.value = true;
   await createNodeFromModule(module, point.x, point.y);
   dropHandled.value = true;
   draggingLegendModuleId.value = null;
@@ -667,7 +654,7 @@ async function finishLegendDrag() {
   if (!draggingLegendModuleId.value || !lastLegendDropPoint.value) return;
   const module = store.modules.find((item) => item.id === draggingLegendModuleId.value);
   if (!module) return;
-  autoLayoutEnabled.value = false;
+  useCustomPositions.value = true;
   await createNodeFromModule(
     module,
     lastLegendDropPoint.value.x,
@@ -698,7 +685,7 @@ async function createNodeFromModule(
   x: number,
   y: number
 ) {
-  return store.createMindmapNode({
+  const created = await store.createMindmapNode({
     title: module.name,
     description: module.description,
     module_id: module.id,
@@ -713,13 +700,17 @@ async function createNodeFromModule(
     position_y: y - 80,
     role_hours: module.role_hours ?? [],
   });
+  if (created) {
+    refreshMindmapFromStore();
+  }
+  return created;
 }
 
 function autoLayoutMindmap() {
-  autoLayoutEnabled.value = true;
-  buildMindmapLayout();
-  applyLayoutToNodes();
-  updateLines();
+  useCustomPositions.value = false;
+  if (!mindmapInstance.value) return;
+  mindmapInstance.value.execCommand("RESET_LAYOUT");
+  mindmapInstance.value.view.fit();
 }
 
 async function saveMindmapVersion() {
@@ -732,9 +723,9 @@ async function saveMindmapVersion() {
 async function applyMindmapVersion() {
   if (!selectedVersionId.value) return;
   await store.applyMindmapVersion(Number(selectedVersionId.value));
-  autoLayoutEnabled.value = false;
+  useCustomPositions.value = true;
   selectedVersionId.value = "";
-  scheduleLineUpdate();
+  refreshMindmapFromStore();
 }
 
 function formatVersion(version: { title: string; created_at: string }) {
@@ -743,6 +734,10 @@ function formatVersion(version: { title: string; created_at: string }) {
 }
 
 async function exportMindmapPng() {
+  if (mindmapMode.value && mindmapInstance.value) {
+    await mindmapInstance.value.export("png", true, "mindmap");
+    return;
+  }
   if (!canvasRef.value) return;
   const prevCompare = compareActive.value;
   compareActive.value = false;
@@ -765,6 +760,10 @@ async function exportMindmapPng() {
 }
 
 async function exportMindmapPdf() {
+  if (mindmapMode.value && mindmapInstance.value) {
+    await mindmapInstance.value.export("pdf", true, "mindmap");
+    return;
+  }
   if (!canvasRef.value) return;
   const prevCompare = compareActive.value;
   compareActive.value = false;
@@ -910,20 +909,18 @@ function setNodeRef(el: Element | null, moduleId: number) {
 
 function scheduleLineUpdate() {
   requestAnimationFrame(() => {
-    if (mindmapMode.value) {
-      buildMindmapLayout();
-    }
     updateLines();
   });
 }
 
 function updateLines() {
-  if (!canvasRef.value) return;
+  if (!canvasRef.value || mindmapMode.value) {
+    lines.value = [];
+    return;
+  }
   const rect = canvasRef.value.getBoundingClientRect();
   const positions: Record<number, { x: number; y: number }> = {};
-  const nodeIds = mindmapMode.value
-    ? store.mindmapNodes.map((node) => node.id)
-    : store.projectModules.map((module) => module.id);
+  const nodeIds = store.projectModules.map((module) => module.id);
   nodeIds.forEach((nodeId) => {
     const element = nodeRefs.value[nodeId];
     if (!element) return;
@@ -970,180 +967,39 @@ function openContextMenu(event: MouseEvent, moduleId: number) {
 
 function toggleMindmap() {
   mindmapMode.value = !mindmapMode.value;
-  nextTick(() => {
-    if (mindmapMode.value) {
-      buildMindmapLayout();
-    }
-    updateLines();
-  });
 }
 
 const zoomStyle = computed(() => {
   return {
-    transform: `scale(${zoom.value})`,
+    transform: mindmapMode.value ? "none" : `scale(${zoom.value})`,
   };
 });
 
 function zoomIn() {
+  if (mindmapMode.value && mindmapInstance.value) {
+    mindmapInstance.value.view.enlarge();
+    return;
+  }
   zoom.value = Math.min(1.6, Number((zoom.value + 0.1).toFixed(2)));
   scheduleLineUpdate();
 }
 
 function zoomOut() {
+  if (mindmapMode.value && mindmapInstance.value) {
+    mindmapInstance.value.view.narrow();
+    return;
+  }
   zoom.value = Math.max(0.6, Number((zoom.value - 0.1).toFixed(2)));
   scheduleLineUpdate();
 }
 
 function resetZoom() {
-  zoom.value = 1;
-  scheduleLineUpdate();
-}
-
-function nodeStyle(moduleId: number, x?: number, y?: number) {
-  if (!mindmapMode.value) return {};
-  const position = autoLayoutEnabled.value
-    ? mindmapPositions.value[moduleId] ?? { x: x ?? 40, y: y ?? 40 }
-    : { x: x ?? 40, y: y ?? 40 };
-  return {
-    left: `${position.x}px`,
-    top: `${position.y}px`,
-  };
-}
-
-function buildMindmapLayout() {
-  if (!canvasRef.value || !mindmapMode.value || !autoLayoutEnabled.value) return;
-  const rect = canvasRef.value.getBoundingClientRect();
-  const width = rect.width || 800;
-  const centerX = width / 2;
-  const levelGap = 260;
-  const rowGap = 40;
-  const nodeHeight = 170;
-  const nodeWidth = 420;
-
-  const nodes = store.mindmapNodes.map((node) => node.id);
-  if (nodes.length === 0) {
-    mindmapPositions.value = {};
+  if (mindmapMode.value && mindmapInstance.value) {
+    mindmapInstance.value.view.reset();
     return;
   }
-
-  const incoming = new Map<number, number>();
-  const children = new Map<number, number[]>();
-  nodes.forEach((id) => {
-    incoming.set(id, 0);
-    children.set(id, []);
-  });
-  connections.value.forEach((connection) => {
-    if (!children.has(connection.fromId)) return;
-    children.get(connection.fromId)?.push(connection.toId);
-    incoming.set(connection.toId, (incoming.get(connection.toId) ?? 0) + 1);
-  });
-
-  const roots = nodes.filter((id) => (incoming.get(id) ?? 0) === 0);
-  const root = roots[0] ?? nodes[0];
-
-  const positions: Record<number, { x: number; y: number }> = {};
-  const sizeCache = new Map<number, number>();
-
-  function subtreeSize(nodeId: number, visiting = new Set<number>()) {
-    if (sizeCache.has(nodeId)) return sizeCache.get(nodeId) ?? 1;
-    if (visiting.has(nodeId)) return 1;
-    visiting.add(nodeId);
-    const childIds = children.get(nodeId) ?? [];
-    const total = childIds.reduce(
-      (sum, child) => sum + subtreeSize(child, visiting),
-      1
-    );
-    sizeCache.set(nodeId, total);
-    visiting.delete(nodeId);
-    return total;
-  }
-
-  const rootChildren = (children.get(root) ?? []).slice();
-  rootChildren.sort((a, b) => subtreeSize(b) - subtreeSize(a));
-  const leftChildren: number[] = [];
-  const rightChildren: number[] = [];
-  rootChildren.forEach((child, index) => {
-    if (index % 2 === 0) {
-      rightChildren.push(child);
-    } else {
-      leftChildren.push(child);
-    }
-  });
-
-  function layoutBranch(
-    nodeId: number,
-    side: number,
-    depth: number,
-    startY: number
-  ): number {
-    const childIds = children.get(nodeId) ?? [];
-    if (childIds.length === 0) {
-      positions[nodeId] = {
-        x: centerX + side * depth * levelGap - nodeWidth / 2,
-        y: startY,
-      };
-      return nodeHeight + rowGap;
-    }
-    let currentY = startY;
-    childIds.forEach((childId) => {
-      const height = layoutBranch(childId, side, depth + 1, currentY);
-      currentY += height;
-    });
-    const totalHeight = Math.max(currentY - startY, nodeHeight + rowGap);
-    const y = startY + totalHeight / 2 - nodeHeight / 2;
-    positions[nodeId] = {
-      x: centerX + side * depth * levelGap - nodeWidth / 2,
-      y,
-    };
-    return totalHeight;
-  }
-
-  let leftHeight = 0;
-  let rightHeight = 0;
-  let leftY = 60;
-  let rightY = 60;
-  leftChildren.forEach((childId) => {
-    const height = layoutBranch(childId, -1, 1, leftY);
-    leftY += height;
-    leftHeight += height;
-  });
-  rightChildren.forEach((childId) => {
-    const height = layoutBranch(childId, 1, 1, rightY);
-    rightY += height;
-    rightHeight += height;
-  });
-
-  const rootY = Math.max(leftHeight, rightHeight) / 2;
-  positions[root] = { x: centerX - nodeWidth / 2, y: Math.max(rootY, 60) };
-
-  let orphanOffset = Object.keys(positions).length * 0.1;
-  nodes.forEach((id, index) => {
-    if (positions[id]) return;
-    const x = 40 + (index % 3) * 280;
-    const y = 300 + orphanOffset * rowGap;
-    positions[id] = { x, y };
-    orphanOffset += 1;
-  });
-
-  mindmapPositions.value = positions;
-}
-
-function applyLayoutToNodes() {
-  const positions = mindmapPositions.value;
-  store.mindmapNodes.forEach((node) => {
-    const position = positions[node.id];
-    if (!position) return;
-    updateNodeLocal({
-      ...node,
-      position_x: position.x,
-      position_y: position.y,
-    });
-    scheduleNodeSave({
-      ...node,
-      position_x: position.x,
-      position_y: position.y,
-    });
-  });
+  zoom.value = 1;
+  scheduleLineUpdate();
 }
 
 function hideContextMenu() {
@@ -1176,8 +1032,12 @@ function handleNodeClick(moduleId: number) {
       { fromId: linkMode.value.fromId, toId: moduleId },
     ];
     updateConnections(nextConnections);
-    scheduleLineUpdate();
-    saveConnections();
+    if (mindmapMode.value) {
+      refreshMindmapFromStore();
+    } else {
+      scheduleLineUpdate();
+      saveConnections();
+    }
   }
   cancelLinkMode();
 }
@@ -1189,15 +1049,23 @@ function removeConnections() {
     (connection) => connection.fromId !== moduleId && connection.toId !== moduleId
   );
   updateConnections(nextConnections);
-  scheduleLineUpdate();
-  saveConnections();
+  if (mindmapMode.value) {
+    refreshMindmapFromStore();
+  } else {
+    scheduleLineUpdate();
+    saveConnections();
+  }
   hideContextMenu();
 }
 
 function clearConnections() {
   updateConnections([]);
-  scheduleLineUpdate();
-  saveConnections();
+  if (mindmapMode.value) {
+    refreshMindmapFromStore();
+  } else {
+    scheduleLineUpdate();
+    saveConnections();
+  }
 }
 
 function resetModule() {
@@ -1244,11 +1112,14 @@ function removeActiveNode() {
 
 async function removeMindmapNode(nodeId: number) {
   await store.deleteMindmapNode(nodeId);
+  if (selectedMindmapNodeId.value === nodeId) {
+    selectedMindmapNodeId.value = null;
+  }
   const nextConnections = connections.value.filter(
     (connection) => connection.fromId !== nodeId && connection.toId !== nodeId
   );
   updateConnections(nextConnections);
-  scheduleLineUpdate();
+  refreshMindmapFromStore();
 }
 
 async function removeMindmapNote(noteId: number) {
@@ -1257,14 +1128,14 @@ async function removeMindmapNote(noteId: number) {
 
 function handleResize() {
   if (mindmapMode.value) {
-    buildMindmapLayout();
+    mindmapInstance.value?.resize();
+    return;
   }
   updateLines();
 }
 
 function updateConnections(nextConnections: { fromId: number; toId: number }[]) {
   if (mindmapMode.value) {
-    mindmapConnections.value = nextConnections;
     store.updateMindmapConnections(
       nextConnections.map((item) => ({
         from_node_id: item.fromId,
@@ -1295,6 +1166,9 @@ function updateNodeField(
   const updated = { ...node, [field]: value };
   updateNodeLocal(updated);
   scheduleNodeSave(updated);
+  if (mindmapMode.value && field === "title") {
+    refreshMindmapFromStore();
+  }
 }
 
 function updateNodeModule(node: ProjectNode, event: Event) {
@@ -1376,40 +1250,6 @@ function scheduleNoteSave(note: ProjectNote) {
   noteSaveTimers.set(note.id, timer);
 }
 
-function startNodeDrag(event: MouseEvent, nodeId: number) {
-  if (!canvasRef.value) return;
-  const node = store.mindmapNodes.find((item) => item.id === nodeId);
-  if (!node) return;
-  autoLayoutEnabled.value = false;
-  const point = toCanvasPoint(event);
-  draggingNode.value = {
-    id: nodeId,
-    offsetX: point.x - node.position_x,
-    offsetY: point.y - node.position_y,
-  };
-  window.addEventListener("mousemove", handleNodeDrag);
-  window.addEventListener("mouseup", stopNodeDrag);
-}
-
-function handleNodeDrag(event: MouseEvent) {
-  if (!draggingNode.value) return;
-  const node = store.mindmapNodes.find((item) => item.id === draggingNode.value?.id);
-  if (!node) return;
-  const point = toCanvasPoint(event);
-  const position_x = point.x - draggingNode.value.offsetX;
-  const position_y = point.y - draggingNode.value.offsetY;
-  const updated = { ...node, position_x, position_y };
-  updateNodeLocal(updated);
-  scheduleNodeSave(updated);
-  scheduleLineUpdate();
-}
-
-function stopNodeDrag() {
-  draggingNode.value = null;
-  window.removeEventListener("mousemove", handleNodeDrag);
-  window.removeEventListener("mouseup", stopNodeDrag);
-}
-
 function startNoteDrag(event: MouseEvent, noteId: number) {
   if (!canvasRef.value) return;
   const note = store.mindmapNotes.find((item) => item.id === noteId);
@@ -1454,22 +1294,271 @@ function downloadDataUrl(dataUrl: string, filename: string) {
   link.remove();
 }
 
+/** Инициализирует SimpleMindMap и подписки. */
+function initializeMindmap() {
+  if (!mindmapContainerRef.value) return;
+  destroyMindmap();
+  const instance = new MindMap({
+    el: mindmapContainerRef.value,
+    data: buildMindmapData(),
+    layout: "mindMap",
+    enableFreeDrag: true,
+    mousewheelAction: "zoom",
+    minZoomRatio: 60,
+    maxZoomRatio: 160,
+    scaleRatio: 10,
+    fit: true,
+  });
+  instance.on("node_click", (node: any) => {
+    handleMindmapNodeClick(node);
+  });
+  instance.on("node_contextmenu", (event: MouseEvent, node: any) => {
+    const nodeId = parseMindmapNodeId(node?.getData?.("uid"));
+    if (!nodeId) return;
+    selectedMindmapNodeId.value = nodeId;
+    openContextMenu(event, nodeId);
+  });
+  instance.on("node_text_edit_change", (payload: { node: any; text: string }) => {
+    handleMindmapTextEdit(payload);
+  });
+  instance.on("node_dragging", (node: any) => {
+    handleMindmapNodeDragging(node);
+  });
+  instance.on("node_dragend", () => {
+    handleMindmapNodeDragEnd();
+  });
+  instance.on("scale", (scale: number) => {
+    zoom.value = Number(scale.toFixed(2));
+  });
+  mindmapInstance.value = instance;
+  zoom.value = Number(instance.view.scale.toFixed(2));
+  applyMindmapSearch(mindmapSearch.value);
+}
+
+function destroyMindmap() {
+  if (!mindmapInstance.value) return;
+  mindmapInstance.value.destroy();
+  mindmapInstance.value = null;
+}
+
+/** Перерисовывает карту по данным стора. */
+function refreshMindmapFromStore() {
+  if (!mindmapInstance.value) return;
+  mindmapInstance.value.setData(buildMindmapData());
+  applyMindmapSearch(mindmapSearch.value);
+}
+
+function applyMindmapSearch(query: string) {
+  const search = (mindmapInstance.value as any)?.search as
+    | { search: (text: string) => void; endSearch: () => void }
+    | undefined;
+  if (!search) return;
+  const normalized = query.trim();
+  if (!normalized) {
+    search.endSearch();
+    return;
+  }
+  search.search(normalized);
+}
+
+function handleMindmapNodeClick(node: any) {
+  const nodeId = parseMindmapNodeId(node?.getData?.("uid"));
+  if (!nodeId) return;
+  selectedMindmapNodeId.value = nodeId;
+  if (linkMode.value.active) {
+    handleNodeClick(nodeId);
+  }
+}
+
+function handleMindmapTextEdit(payload: { node: any; text: string }) {
+  const nodeId = parseMindmapNodeId(payload.node?.getData?.("uid"));
+  if (!nodeId) return;
+  const target = store.mindmapNodes.find((node) => node.id === nodeId);
+  if (!target) return;
+  const updated = { ...target, title: payload.text };
+  updateNodeLocal(updated);
+  scheduleNodeSave(updated);
+}
+
+function handleMindmapNodeDragging(node: any) {
+  lastDraggedMindmapNode.value = node;
+}
+
+function handleMindmapNodeDragEnd() {
+  if (!lastDraggedMindmapNode.value) return;
+  const node = lastDraggedMindmapNode.value;
+  lastDraggedMindmapNode.value = null;
+  const nodeId = parseMindmapNodeId(node?.getData?.("uid"));
+  if (!nodeId) return;
+  const target = store.mindmapNodes.find((item) => item.id === nodeId);
+  if (!target) return;
+  useCustomPositions.value = true;
+  const updated = {
+    ...target,
+    position_x: Math.round(node.left ?? 0),
+    position_y: Math.round(node.top ?? 0),
+  };
+  updateNodeLocal(updated);
+  scheduleNodeSave(updated);
+  syncMindmapConnections();
+}
+
+/** Синхронизирует связи из структуры mindmap в стор. */
+function syncMindmapConnections() {
+  if (!mindmapInstance.value) return;
+  const data = mindmapInstance.value.getData() as MindmapTreeNode;
+  const nextConnections = buildConnectionsFromMindmapData(data);
+  if (nextConnections.length === 0 && store.mindmapConnections.length === 0) return;
+  updateConnections(nextConnections);
+}
+
+function getDropPoint(event: { clientX: number; clientY: number }) {
+  if (!mindmapMode.value) return toCanvasPoint(event);
+  return getMindmapPoint(event);
+}
+
+function getMindmapCenter() {
+  if (!mindmapContainerRef.value || !mindmapInstance.value) {
+    return { x: 0, y: 0 };
+  }
+  const rect = mindmapContainerRef.value.getBoundingClientRect();
+  return getMindmapPoint({
+    clientX: rect.left + rect.width / 2,
+    clientY: rect.top + rect.height / 2,
+  });
+}
+
+function getMindmapPoint(event: { clientX: number; clientY: number }) {
+  if (!mindmapInstance.value) return { x: 0, y: 0 };
+  const raw = mindmapInstance.value.toPos(event.clientX, event.clientY);
+  const transform = mindmapInstance.value.draw.transform();
+  return {
+    x: (raw.x - transform.translateX) / transform.scaleX,
+    y: (raw.y - transform.translateY) / transform.scaleY,
+  };
+}
+
+/** Строит дерево узлов для SimpleMindMap из текущего стора. */
+function buildMindmapData() {
+  if (store.mindmapNodes.length === 0) {
+    return createRootNode("Схема проекта");
+  }
+  const nodeMap = new Map<number, MindmapTreeNode>();
+  const childrenMap = new Map<number, number[]>();
+  const incoming = new Map<number, number>();
+  store.mindmapNodes.forEach((node) => {
+    nodeMap.set(node.id, createMindmapNode(node));
+    childrenMap.set(node.id, []);
+    incoming.set(node.id, 0);
+  });
+  store.mindmapConnections.forEach((connection) => {
+    if (!childrenMap.has(connection.from_node_id)) return;
+    childrenMap.get(connection.from_node_id)?.push(connection.to_node_id);
+    incoming.set(
+      connection.to_node_id,
+      (incoming.get(connection.to_node_id) ?? 0) + 1
+    );
+  });
+  const roots = store.mindmapNodes
+    .map((node) => node.id)
+    .filter((id) => (incoming.get(id) ?? 0) === 0);
+  const visited = new Set<number>();
+  const rootChildren = roots.map((id) => buildMindmapBranch(id, nodeMap, childrenMap, visited));
+  const orphans = store.mindmapNodes
+    .map((node) => node.id)
+    .filter((id) => !visited.has(id))
+    .map((id) => buildMindmapBranch(id, nodeMap, childrenMap, visited));
+  if (rootChildren.length === 1 && orphans.length === 0) {
+    return rootChildren[0];
+  }
+  return createRootNode("Схема проекта", [...rootChildren, ...orphans]);
+}
+
+function buildMindmapBranch(
+  nodeId: number,
+  nodeMap: Map<number, MindmapTreeNode>,
+  childrenMap: Map<number, number[]>,
+  visited: Set<number>
+) {
+  if (visited.has(nodeId)) {
+    return nodeMap.get(nodeId) ?? createRootNode("Цикл");
+  }
+  visited.add(nodeId);
+  const base = nodeMap.get(nodeId) ?? createRootNode("Узел");
+  const children = (childrenMap.get(nodeId) ?? [])
+    .map((childId) => buildMindmapBranch(childId, nodeMap, childrenMap, visited))
+    .filter(Boolean);
+  return {
+    data: { ...base.data },
+    children,
+  };
+}
+
+function buildConnectionsFromMindmapData(root: MindmapTreeNode) {
+  const connections: { fromId: number; toId: number }[] = [];
+  function walk(node: MindmapTreeNode) {
+    const parentId = parseMindmapNodeId(node.data?.uid);
+    node.children?.forEach((child) => {
+      const childId = parseMindmapNodeId(child.data?.uid);
+      if (parentId && childId) {
+        connections.push({ fromId: parentId, toId: childId });
+      }
+      walk(child);
+    });
+  }
+  walk(root);
+  return connections;
+}
+
+function createMindmapNode(node: ProjectNode): MindmapTreeNode {
+  const data: MindmapNodeData = {
+    text: node.title || "Узел",
+    uid: String(node.id),
+  };
+  if (useCustomPositions.value) {
+    const left = normalizePosition(node.position_x);
+    const top = normalizePosition(node.position_y);
+    if (left !== null && top !== null) {
+      data.customLeft = left;
+      data.customTop = top;
+    }
+  }
+  return { data, children: [] };
+}
+
+function createRootNode(title: string, children: MindmapTreeNode[] = []) {
+  return {
+    data: {
+      text: title,
+      uid: `root-${store.project?.id ?? "local"}`,
+    },
+    children,
+  };
+}
+
+function normalizePosition(value: number) {
+  if (!Number.isFinite(value)) return null;
+  return Math.round(value);
+}
+
+function parseMindmapNodeId(uid: unknown) {
+  const value = Number(uid);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return value;
+}
+
 watch(
   () => store.projectModules.map((module) => module.id),
   async () => {
     await nextTick();
-    if (!mindmapMode.value) {
-      const nextConnections = moduleConnections.value.filter((connection) => {
-        return (
-          store.projectModules.some((module) => module.id === connection.fromId) &&
-          store.projectModules.some((module) => module.id === connection.toId)
-        );
-      });
-      moduleConnections.value = nextConnections;
-    }
-    if (mindmapMode.value) {
-      buildMindmapLayout();
-    }
+    if (mindmapMode.value) return;
+    const nextConnections = moduleConnections.value.filter((connection) => {
+      return (
+        store.projectModules.some((module) => module.id === connection.fromId) &&
+        store.projectModules.some((module) => module.id === connection.toId)
+      );
+    });
+    moduleConnections.value = nextConnections;
     updateLines();
     saveConnections();
   }
@@ -1480,28 +1569,15 @@ watch(
   async () => {
     if (!mindmapMode.value) return;
     await nextTick();
-    const nextConnections = mindmapConnections.value.filter((connection) => {
-      return (
-        store.mindmapNodes.some((node) => node.id === connection.fromId) &&
-        store.mindmapNodes.some((node) => node.id === connection.toId)
-      );
-    });
-    mindmapConnections.value = nextConnections;
-    buildMindmapLayout();
-    updateLines();
+    refreshMindmapFromStore();
   }
 );
 
 watch(
   () => store.mindmapConnections,
-  (value) => {
-    if (mindmapMode.value) {
-      mindmapConnections.value = value.map((item) => ({
-        fromId: item.from_node_id,
-        toId: item.to_node_id,
-      }));
-      scheduleLineUpdate();
-    }
+  () => {
+    if (!mindmapMode.value) return;
+    refreshMindmapFromStore();
   },
   { immediate: true }
 );
@@ -1509,7 +1585,8 @@ watch(
 watch(
   () => store.connections,
   (items) => {
-    connections.value = items.map((item) => ({
+    if (mindmapMode.value) return;
+    moduleConnections.value = items.map((item) => ({
       fromId: item.from_project_module_id,
       toId: item.to_project_module_id,
     }));
@@ -1520,15 +1597,25 @@ watch(
 
 watch(
   () => mindmapMode.value,
-  (value) => {
+  async (value) => {
     if (value) {
-      mindmapConnections.value = store.mindmapConnections.map((item) => ({
-        fromId: item.from_node_id,
-        toId: item.to_node_id,
-      }));
-      buildMindmapLayout();
+      freeZoomCache.value = zoom.value;
+      await nextTick();
+      initializeMindmap();
+    } else {
+      destroyMindmap();
+      selectedMindmapNodeId.value = null;
+      zoom.value = freeZoomCache.value;
     }
     scheduleLineUpdate();
+  }
+);
+
+watch(
+  () => mindmapSearch.value,
+  (value) => {
+    if (!mindmapMode.value) return;
+    applyMindmapSearch(value);
   }
 );
 onMounted(() => {
@@ -1540,10 +1627,20 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener("resize", handleResize);
+  destroyMindmap();
 });
 
 function saveConnections() {
   if (!store.project) return;
+  if (mindmapMode.value) {
+    store.updateMindmapConnections(
+      connections.value.map((item) => ({
+        from_node_id: item.fromId,
+        to_node_id: item.toId,
+      }))
+    );
+    return;
+  }
   const payload: ProjectConnection[] = connections.value.map((item) => ({
     id: 0,
     project_id: store.project?.id ?? 0,
@@ -1728,8 +1825,35 @@ function saveConnections() {
   min-height: 360px;
 }
 .mindmap-nodes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mindmap-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 12px;
+  align-items: start;
+}
+.mindmap-stage {
   position: relative;
-  min-height: 360px;
+  min-height: 420px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  overflow: hidden;
+}
+.mindmap-container {
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+}
+.mindmap-editor {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 .module-card {
   width: min(420px, 100%);
