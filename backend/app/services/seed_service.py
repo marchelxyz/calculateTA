@@ -160,11 +160,10 @@ def _seed_modules(session: Session) -> None:
 
 
 def _seed_rates(session: Session) -> None:
-    existing = session.execute(select(Rate.role, Rate.level)).all()
-    existing_set = {(role, level) for role, level in existing}
+    existing = session.execute(select(Rate.id)).first()
+    if existing:
+        return
     for rate_data in DEFAULT_RATES:
-        if (rate_data["role"], rate_data["level"]) in existing_set:
-            continue
         session.add(Rate(**rate_data))
     session.commit()
 

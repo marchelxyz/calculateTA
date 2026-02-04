@@ -12,7 +12,7 @@ from app.models import (
     ProjectMindmapVersion,
     ProjectNode,
     ProjectNodeConnection,
-    ProjectNodeRoleHours,
+    ProjectNodeRoleHours as ProjectNodeRoleHoursModel,
     ProjectNote,
 )
 from app.schemas import (
@@ -23,7 +23,7 @@ from app.schemas import (
     ProjectNodeConnectionBase,
     ProjectNodeCreate,
     ProjectNodeOut,
-    ProjectNodeRoleHours,
+    ProjectNodeRoleHours as ProjectNodeRoleHoursPayload,
     ProjectNoteBase,
     ProjectNoteOut,
 )
@@ -383,16 +383,16 @@ def _ensure_project(session: Session, project_id: int) -> Project:
 def _replace_node_role_hours(
     session: Session,
     node_id: int,
-    role_hours: list[ProjectNodeRoleHours],
+    role_hours: list[ProjectNodeRoleHoursPayload],
 ) -> None:
     session.execute(
-        delete(ProjectNodeRoleHours).where(ProjectNodeRoleHours.node_id == node_id)
+        delete(ProjectNodeRoleHoursModel).where(ProjectNodeRoleHoursModel.node_id == node_id)
     )
     for item in role_hours:
         if item.hours <= 0:
             continue
         session.add(
-            ProjectNodeRoleHours(
+            ProjectNodeRoleHoursModel(
                 node_id=node_id,
                 role=item.role,
                 hours=item.hours,
@@ -449,7 +449,7 @@ def _replace_mindmap(
         delete(ProjectNodeConnection).where(ProjectNodeConnection.project_id == project_id)
     )
     session.execute(
-        delete(ProjectNodeRoleHours).where(ProjectNodeRoleHours.node_id.in_(
+        delete(ProjectNodeRoleHoursModel).where(ProjectNodeRoleHoursModel.node_id.in_(
             select(ProjectNode.id).where(ProjectNode.project_id == project_id)
         ))
     )
@@ -480,7 +480,7 @@ def _replace_mindmap(
             if item.hours <= 0:
                 continue
             session.add(
-                ProjectNodeRoleHours(
+                ProjectNodeRoleHoursModel(
                     node_id=created.id,
                     role=item.role,
                     hours=item.hours,
