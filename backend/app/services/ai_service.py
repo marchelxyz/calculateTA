@@ -115,7 +115,16 @@ def _parse_with_openai(
     except Exception as exc:
         if _is_non_chat_model_error(exc):
             logger.warning("OpenAI model is not chat-capable. Retrying with completions API.")
-            content = _request_openai_completion(client, system_prompt, prompt)
+            try:
+                content = _request_openai_completion(client, system_prompt, prompt)
+            except Exception as completion_exc:
+                if _is_non_completion_model_error(completion_exc):
+                    logger.warning(
+                        "OpenAI model is not completions-capable. Falling back to heuristics."
+                    )
+                else:
+                    logger.exception("OpenAI completion request failed. Falling back to heuristics.")
+                return _parse_with_heuristics(prompt, catalog, catalog_index)
         else:
             logger.exception("OpenAI request failed. Falling back to heuristics.")
             return _parse_with_heuristics(prompt, catalog, catalog_index)
@@ -185,6 +194,12 @@ def _is_non_chat_model_error(error: Exception) -> bool:
     """Detect when a non-chat model is used with chat-completions."""
     message = str(error).lower()
     return "not a chat model" in message or "chat/completions" in message
+
+
+def _is_non_completion_model_error(error: Exception) -> bool:
+    """Detect when a model is not supported by completions endpoint."""
+    message = str(error).lower()
+    return "not supported in the v1/completions" in message or "completions endpoint" in message
 
 
 def _parse_with_heuristics(
