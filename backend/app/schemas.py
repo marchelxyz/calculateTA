@@ -26,6 +26,17 @@ class ModuleCreate(ModuleBase):
     """Module creation schema."""
 
 
+class ModuleUpdate(BaseModel):
+    """Module update schema."""
+
+    name: str | None = None
+    description: str | None = None
+    hours_frontend: float | None = None
+    hours_backend: float | None = None
+    hours_qa: float | None = None
+    role_hours: list[ModuleRoleHours] | None = None
+
+
 class ModuleOut(ModuleBase):
     """Module response schema."""
 
