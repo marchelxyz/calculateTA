@@ -78,6 +78,7 @@
     </div>
     <div
       class="canvas-surface"
+      :class="{ 'mindmap-mode': mindmapMode }"
       ref="canvasRef"
       @click="hideContextMenu"
       @dragover.prevent="handleCanvasDragOver"
@@ -85,6 +86,7 @@
     >
       <div
         class="canvas-zoom"
+        :class="{ 'mindmap-mode': mindmapMode }"
         :style="zoomStyle"
         @dragover.prevent="handleCanvasDragOver"
         @drop.prevent="handleCanvasDrop"
@@ -1298,10 +1300,12 @@ function downloadDataUrl(dataUrl: string, filename: string) {
 function initializeMindmap() {
   if (!mindmapContainerRef.value) return;
   destroyMindmap();
+  const themeConfig = resolveMindmapTheme();
   const instance = new MindMap({
     el: mindmapContainerRef.value,
     data: buildMindmapData(),
     layout: "mindMap",
+    themeConfig,
     enableFreeDrag: true,
     mousewheelAction: "zoom",
     minZoomRatio: 60,
@@ -1344,6 +1348,8 @@ function destroyMindmap() {
 /** Перерисовывает карту по данным стора. */
 function refreshMindmapFromStore() {
   if (!mindmapInstance.value) return;
+  const themeConfig = resolveMindmapTheme();
+  mindmapInstance.value.setThemeConfig(themeConfig, true);
   mindmapInstance.value.setData(buildMindmapData());
   applyMindmapSearch(mindmapSearch.value);
 }
@@ -1547,6 +1553,39 @@ function parseMindmapNodeId(uid: unknown) {
   return value;
 }
 
+function resolveMindmapTheme() {
+  const rootStyles = getComputedStyle(document.documentElement);
+  const text = rootStyles.getPropertyValue("--text").trim() || "#1f2937";
+  const cardBg = rootStyles.getPropertyValue("--card-bg").trim() || "#ffffff";
+  const border = rootStyles.getPropertyValue("--border").trim() || "#e5e7eb";
+  const accent = rootStyles.getPropertyValue("--accent").trim() || "#549688";
+  return {
+    backgroundColor: cardBg,
+    lineColor: accent,
+    generalizationLineColor: accent,
+    associativeLineColor: text,
+    root: {
+      fillColor: accent,
+      color: "#ffffff",
+    },
+    second: {
+      fillColor: cardBg,
+      color: text,
+      borderColor: accent,
+    },
+    node: {
+      fillColor: "transparent",
+      color: text,
+    },
+    generalization: {
+      fillColor: cardBg,
+      color: text,
+      borderColor: accent,
+    },
+    hoverRectColor: border,
+  };
+}
+
 watch(
   () => store.projectModules.map((module) => module.id),
   async () => {
@@ -1743,6 +1782,9 @@ function saveConnections() {
   position: relative;
   overflow: auto;
 }
+.canvas-surface.mindmap-mode {
+  background-image: none;
+}
 .legend {
   position: sticky;
   top: 0;
@@ -1806,6 +1848,10 @@ function saveConnections() {
   width: fit-content;
   min-width: 100%;
 }
+.canvas-zoom.mindmap-mode {
+  width: 100%;
+  min-width: 0;
+}
 .canvas-lines {
   position: absolute;
   inset: 0;
@@ -1831,7 +1877,7 @@ function saveConnections() {
 }
 .mindmap-content {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) 360px;
   gap: 12px;
   align-items: start;
 }
@@ -1842,6 +1888,7 @@ function saveConnections() {
   border: 1px solid var(--border);
   background: var(--card-bg);
   overflow: hidden;
+  min-width: 0;
 }
 .mindmap-container {
   width: 100%;
@@ -1854,6 +1901,23 @@ function saveConnections() {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
+  color: var(--text);
+}
+.mindmap-editor .module-card,
+.mindmap-editor label,
+.mindmap-editor input,
+.mindmap-editor select,
+.mindmap-editor textarea {
+  color: var(--text);
+}
+@media (max-width: 1200px) {
+  .mindmap-content {
+    grid-template-columns: 1fr;
+  }
+  .mindmap-editor {
+    position: static;
+  }
 }
 .module-card {
   width: min(420px, 100%);
