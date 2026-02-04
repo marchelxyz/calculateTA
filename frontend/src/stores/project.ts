@@ -158,6 +158,13 @@ export const useProjectStore = defineStore("project", {
       await client.delete(`/modules/${moduleId}`);
       this.modules = this.modules.filter((module) => module.id !== moduleId);
     },
+    async updateModule(moduleId: number, payload: Partial<Module>) {
+      const response = await client.patch<Module>(`/modules/${moduleId}`, payload);
+      this.modules = this.modules.map((module) =>
+        module.id === moduleId ? response.data : module
+      );
+      return response.data;
+    },
     async loadProjectModules() {
       if (!this.project) return;
       const response = await client.get<ProjectModule[]>(

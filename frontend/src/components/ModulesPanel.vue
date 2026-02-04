@@ -8,10 +8,33 @@
     <div class="list">
       <div v-for="module in filteredModules" :key="module.id" class="card">
         <div class="card-body">
-          <strong>{{ module.name }}</strong>
-          <span>{{ module.description }}</span>
+          <label>
+            Название
+            <input v-model="drafts[module.id].name" />
+          </label>
+          <label>
+            Описание
+            <input v-model="drafts[module.id].description" />
+          </label>
+          <div class="hours">
+            <label>
+              FE
+              <input type="number" v-model.number="drafts[module.id].hours_frontend" />
+            </label>
+            <label>
+              BE
+              <input type="number" v-model.number="drafts[module.id].hours_backend" />
+            </label>
+            <label>
+              QA
+              <input type="number" v-model.number="drafts[module.id].hours_qa" />
+            </label>
+          </div>
         </div>
-        <button class="danger" @click="removeModule(module.id)">Удалить</button>
+        <div class="card-actions">
+          <button class="ghost" @click="saveModule(module.id)">Сохранить</button>
+          <button class="danger" @click="removeModule(module.id)">Удалить</button>
+        </div>
       </div>
       <div v-if="!filteredModules.length" class="empty">Модули не найдены.</div>
     </div>
@@ -56,11 +79,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import { useProjectStore } from "../stores/project";
 
 const store = useProjectStore();
 const search = ref("");
+const drafts = reactive<Record<number, {
+  name: string;
+  description: string;
+  hours_frontend: number;
+  hours_backend: number;
+  hours_qa: number;
+}>>({});
 const draft = ref({
   code: "",
   name: "",
@@ -81,6 +111,22 @@ const filteredModules = computed(() => {
       .includes(query)
   );
 });
+
+watch(
+  () => store.modules,
+  (modules) => {
+    modules.forEach((module) => {
+      drafts[module.id] = {
+        name: module.name,
+        description: module.description,
+        hours_frontend: module.hours_frontend,
+        hours_backend: module.hours_backend,
+        hours_qa: module.hours_qa,
+      };
+    });
+  },
+  { immediate: true }
+);
 
 const extraRoles = computed(() => {
   const base = new Set(["фронтенд", "бекенд", "тестировщик", "qa", "backend", "frontend"]);
@@ -125,6 +171,18 @@ async function removeModule(moduleId: number) {
     console.error(error);
     alert("Нельзя удалить модуль, который используется в проектах.");
   }
+}
+
+async function saveModule(moduleId: number) {
+  const draft = drafts[moduleId];
+  if (!draft) return;
+  await store.updateModule(moduleId, {
+    name: draft.name.trim(),
+    description: draft.description.trim(),
+    hours_frontend: Number(draft.hours_frontend) || 0,
+    hours_backend: Number(draft.hours_backend) || 0,
+    hours_qa: Number(draft.hours_qa) || 0,
+  });
 }
 
 function slugify(value: string) {
@@ -175,14 +233,40 @@ function slugify(value: string) {
 .card-body {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  flex: 1;
 }
-.card strong {
-  font-size: 14px;
-}
-.card span {
+.card-body label {
   font-size: 12px;
   color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.card-body input {
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
+}
+.hours {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 8px;
+}
+.card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 10px;
+  cursor: pointer;
 }
 .danger {
   background: #ef4444;

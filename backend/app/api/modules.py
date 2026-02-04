@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy.orm import Session
 
 from app.db import get_db_session
 from app.models import Module, ModuleRoleHours, ProjectModule
-from app.schemas import ModuleCreate, ModuleOut, ModuleRoleHours as ModuleRoleHoursPayload
+from app.schemas import (
+    ModuleCreate,
+    ModuleOut,
+    ModuleRoleHours as ModuleRoleHoursPayload,
+    ModuleUpdate,
+)
 
 router = APIRouter(prefix="/modules", tags=["modules"])
 
@@ -50,6 +54,36 @@ def create_module(
     return _serialize_module(module)
 
 
+@router.patch("/{module_id}", response_model=ModuleOut)
+def update_module(
+    module_id: int,
+    payload: ModuleUpdate,
+    session: Session = Depends(get_db_session),
+) -> ModuleOut:
+    """Update catalog module."""
+
+    module = session.execute(
+        select(Module).where(Module.id == module_id).options(joinedload(Module.role_hours))
+    ).scalar_one_or_none()
+    if not module:
+        raise HTTPException(status_code=404, detail="Module not found")
+    if payload.name is not None:
+        module.name = payload.name
+    if payload.description is not None:
+        module.description = payload.description
+    if payload.hours_frontend is not None:
+        module.hours_frontend = payload.hours_frontend
+    if payload.hours_backend is not None:
+        module.hours_backend = payload.hours_backend
+    if payload.hours_qa is not None:
+        module.hours_qa = payload.hours_qa
+    if payload.role_hours is not None:
+        _replace_role_hours(session, module.id, payload.role_hours)
+    session.commit()
+    session.refresh(module)
+    session.refresh(module, attribute_names=["role_hours"])
+    return _serialize_module(module)
+
 @router.delete("/{module_id}")
 def delete_module(
     module_id: int,
@@ -87,6 +121,17 @@ def _sync_role_hours(
                 hours=item.hours,
             )
         )
+
+
+def _replace_role_hours(
+    session: Session,
+    module_id: int,
+    items: list[ModuleRoleHoursPayload],
+) -> None:
+    session.execute(
+        delete(ModuleRoleHours).where(ModuleRoleHours.module_id == module_id)
+    )
+    _sync_role_hours(session, module_id, items)
 
 
 def _serialize_module(module: Module) -> ModuleOut:

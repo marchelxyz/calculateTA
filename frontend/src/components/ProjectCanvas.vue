@@ -19,7 +19,7 @@
           <button class="ghost" @click="buildAiMindmap">AI-схема</button>
           <button class="ghost" @click="addMindmapNode">Добавить узел</button>
           <button class="ghost" @click="addMindmapNote">Комментарий</button>
-          <button class="ghost" @click="autoLayoutMindmap">Авто-раскладка</button>
+          <button class="ghost" @click="autoLayoutMindmap">Авто-раскладка (XMind)</button>
           <input
             v-model="versionTitle"
             class="mindmap-input"
@@ -82,13 +82,14 @@
         <template v-if="mindmapMode">
           <div class="mindmap-nodes">
             <div class="legend">
-              <div class="legend-title">Подсистемы</div>
+              <div class="legend-title">Модули</div>
               <div class="legend-items">
                 <span
                   v-for="module in store.modules"
                   :key="module.id"
                   class="legend-item"
                   :style="moduleBadgeStyle(module.id)"
+                  @mousedown.stop.prevent="startLegendNode(module.id, $event)"
                 >
                   {{ module.name }}
                 </span>
@@ -554,6 +555,9 @@ async function buildAiMindmap() {
 async function addMindmapNode() {
   if (!canvasRef.value) return;
   const rect = canvasRef.value.getBoundingClientRect();
+  const scale = zoom.value || 1;
+  const centerX = (canvasRef.value.scrollLeft + rect.width / 2) / scale;
+  const centerY = (canvasRef.value.scrollTop + rect.height / 2) / scale;
   const created = await store.createMindmapNode({
     title: "Новый узел",
     description: "",
@@ -565,8 +569,8 @@ async function addMindmapNode() {
     uncertainty_level: null,
     uiux_level: null,
     legacy_code: null,
-    position_x: rect.width / 2 - 120,
-    position_y: rect.height / 2 - 80,
+    position_x: centerX - 120,
+    position_y: centerY - 80,
     role_hours: [],
   });
   if (created) {
@@ -577,11 +581,37 @@ async function addMindmapNode() {
 async function addMindmapNote() {
   if (!canvasRef.value) return;
   const rect = canvasRef.value.getBoundingClientRect();
+  const scale = zoom.value || 1;
+  const centerX = (canvasRef.value.scrollLeft + rect.width / 2) / scale;
+  const centerY = (canvasRef.value.scrollTop + rect.height / 2) / scale;
   await store.createMindmapNote({
     content: "Комментарий",
-    position_x: rect.width / 2 - 80,
-    position_y: rect.height / 2 - 40,
+    position_x: centerX - 80,
+    position_y: centerY - 40,
   });
+}
+
+async function startLegendNode(moduleId: number, event: MouseEvent) {
+  const module = store.modules.find((item) => item.id === moduleId);
+  if (!module) return;
+  const point = toCanvasPoint(event);
+  const created = await store.createMindmapNode({
+    title: module.name,
+    description: module.description,
+    module_id: module.id,
+    is_ai: false,
+    hours_frontend: module.hours_frontend,
+    hours_backend: module.hours_backend,
+    hours_qa: module.hours_qa,
+    uncertainty_level: null,
+    uiux_level: null,
+    legacy_code: null,
+    position_x: point.x - 120,
+    position_y: point.y - 80,
+    role_hours: module.role_hours ?? [],
+  });
+  if (!created) return;
+  startNodeDrag(event, created.id);
 }
 
 function toCanvasPoint(event: MouseEvent) {
@@ -1552,6 +1582,8 @@ function saveConnections() {
   border-radius: 999px;
   font-size: 11px;
   border: 1px solid transparent;
+  cursor: grab;
+  user-select: none;
 }
 .legend-compare {
   display: flex;
@@ -1728,7 +1760,7 @@ select {
 }
 .note {
   position: absolute;
-  width: 200px;
+  width: 160px;
   background: var(--note-bg);
   border: 1px solid var(--note-border);
   border-radius: 12px;
@@ -1737,10 +1769,10 @@ select {
 }
 .note textarea {
   width: 100%;
-  min-height: 80px;
+  min-height: 60px;
   background: transparent;
   border: none;
-  resize: none;
+  resize: vertical;
   color: var(--note-text);
 }
 .note-remove {
